@@ -1,0 +1,140 @@
+---
+title: "Time Series HW 2"
+author: "Allison Theobold, Andrea Mack (Answers checked with Meryl Storb & Katie Fogg)"
+date: "September 9, 2016"
+output: pdf_document
+---
+
+```{r, warning = FALSE, message=FALSE}
+## Allison's code
+
+rawbozemandata <- read.csv("https://dl.dropboxusercontent.com/u/77307195/rawbozemandata.csv", 
+                           header = T)
+
+library(dplyr, quietly = T)
+library(zoo, quietly = T)
+
+rawd <- tbl_df(rawbozemandata) %>% 
+  mutate(DATE = as.yearmon(as.character(DATE), "%Y%m"))
+
+rawd2 <- mutate(rawd, YEAR = as.numeric(format(DATE, "%Y"))) %>% 
+  mutate(MONTH = as.factor(format(DATE, "%m")))
+
+rawd2 <- mutate(rawd2, YEARFRAC = YEAR + (as.numeric(MONTH) - 1)/12)
+
+```
+
+```{r, eval=FALSE}
+## Andrea's code
+setwd("C:/Users/Andrea Mack/Desktop/mack_hub/course_work/Time Series/Homework/HW2")
+rawbozemandata <- read.csv("rawbozemandata.csv", stringsAsFactors = FALSE)
+rawd <- NULL
+rawd <- data.frame(rawbozemandata)
+rawd$year <- as.numeric(substring(rawd$DATE, 1,4))
+rawd$month <- as.numeric(substring(rawd$DATE, 5,6))
+rawd$month.dec <- rawd$month/12
+rawd$date.new <- rawd$year + rawd$month.dec 
+rawd$month <- month.abb[((rawd$month))]
+rawd$temp <- rawd$MMXT
+```
+
+```{r, warning=FALSE, message=FALSE, echo = FALSE}
+library(xtable, quietly = T)
+model1 <- lm(MMXT ~ YEAR + MONTH, data = rawd2)
+```
+
+# 1.  
+The model using the linear time trend for year and month is:
+
+\begin{center}
+
+$\widehat{temp_i} = -69.2902 + 0.0517\text{ Year}_i + 3.7058\text{ I(February)} + 11.198\text{ I(March)} + 21.9902\text{ I(April)} + 31.2412\text{ I(May)} + 39.7299\text{ I(June)} + 49.5908\text{ I(July)} + 48.496\text{ I(August)} + 37.6638\text{ I(September)} + 25.8609\text{ I(October)} + 10.3582\text{ I(November)} + 1.7802\text{ I(December)}$  
+
+\end{center}
+
+
+# 2.  
+The model for January is as follows:
+$$ \widehat{temp_i} = -69.2902 + 0.0517\text{ Year}_i $$
+
+The model for July is as follows:
+$$ \widehat{temp_i} = -19.6994 + 0.0517\text{ Year}_i $$
+
+# 3.      
+
+```{r, echo = FALSE, message=FALSE}
+library(car, quietly = T)
+library(ggplot2, quietly = T)
+
+ggplot(data = rawd2, aes(x = YEAR, y = MMXT, color = MONTH)) + geom_point() + geom_smooth()  
+
+```
+
+It appears that December and November average temperatures have not changed much from 1900 to 2015, while January and March appear to have the most substantial increases over the 115 year period. It appears that average monthly temperature increased about 5 $^{\circ}$ F over the 115 years, which is quite similar to the average rate of increase we discussed in the Oregon State temperature data in class.
+
+# 4.  
+Below is the ANOVA table for testing if the the effect of time differs by month, using Type II sums of squares. We see in the table that there is strong evidence that the relationship between time and the mean temperature differs by month (F-stat = 2.1295 on an F(11, 1350) distribution, p-value = 0.016). 
+
+```{r, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+library(xtable)
+library(pander)
+
+model2 <- lm(MMXT ~ YEAR*MONTH, data = rawd2)
+
+pander(Anova(model2), digits = 4)
+```
+
+# 5.  
+
+```{r, echo = F, message=FALSE, warning=FALSE, comment = ""}
+library(multcomp, quietly = T)
+library(pander)
+
+Tukey <- glht(model1, linfct = mcp(MONTH = "Tukey"))
+cld(Tukey)
+confint(Tukey)
+
+```
+
+Using the above compact letter display, we see that the following months are not detectalbly different from each other, after accounting for the linear relationship between average temperatures and year. 
+
+* January and December 
+* February and December
+* November and March  
+
+Overall, there is strong evidence that August and July were the warmest months on average and after accounting for yearly temperature changes. There was strong evidence that June was the next warmest, followed by September, then May, then October, then April, then March, and then November on average and after accounting for yearly temperature changes. There is strong evidence that December and Feburary were the coolest months on average and after accounting for yearly temperature changes with no evidence of a difference between January and December under similar model conditions.
+
+# 6.     
+
+```{r, echo = F, results = 'asis', warning=FALSE}
+library(pander)
+source("https://dl.dropboxusercontent.com/u/77307195/concise_lm.R")
+
+model3 <- lm(MMXT ~ MONTH + YEAR + I(YEAR^2), data = rawd2)
+
+pander(summary(model3)$coefficients, digits = 3, concise = T)
+```
+
+Testing for evidence of a quadratic relationship between average temperatures and year, after accounting for monthly variation and a linear year trend, we have the following hypothesis:  
+
+$H_{0}: \beta_{year^2} = 0$
+$H_{A}: \beta_{year^2} \neq 0$  
+
+Using the above model output, there is no evidence of a quadratic relationship between average temperatures and year, after accounting for monthly variation and a linear year trend (t-stat = -0.518 $\sim t_{1360},$ p-value = 0.604).  
+
+# 7.      
+
+```{r, echo=FALSE}
+par(mfrow = c(2,2))
+plot(model3)
+```
+
+The monthly discreteness is apparent in the clumps in the residuals vs. fitted plot. It does appear that there is less spread in the larger fitted values than the smaller. Hence, the fitted values for the summer months show less variability than the fitted values for the cooler months. We also note the scale of the residuals, with residuals near -20 occurring in the cooler months. Observation 441, a January measurement in 1937 with a MMXT of 10.3, differs from all other January measurements by nearly 10 units.  
+
+
+# 8.  
+```{r}
+## Allison's R Version
+getRversion()
+
+```

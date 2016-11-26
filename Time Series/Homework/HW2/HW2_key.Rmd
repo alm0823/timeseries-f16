@@ -1,0 +1,165 @@
+---
+word_document:
+  fig_height: 7
+  fig_width: 10
+  reference_docx: mystyles.docx
+author: "Mark Greenwood"
+date: ''
+output: word_document
+title: "Time Series HW 2 Key"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## HW 2
+
+Graded out of 46.5 points and scored out of 50 points, including two points for showing me your R version.
+
+__You can not work with anyone that you worked with on the first homework.__ You can discuss it with old partners but should try work as much as possible with new collaborators.
+
+You will get a 5% bonus on this homework if you do this homework in a group of 2 or 3 but not if it is any larger. If you discuss the assignment with others but turn in separate assignments, you need to document any discussions you had and how it impacted your answers - treat this like citing your sources.
+
+We'll continue working with temperatures in degrees F in the column labeled MMXT (https://dl.dropboxusercontent.com/u/77307195/rawbozemandata.csv) for Bozeman's MSU weather station. 
+
+Either use my code or your code to generate a `Year` variable that includes the fractional information on the month. For example, January would be 1900+0/12 and December would be 1900+11/12 in the `Year` variable.
+
+
+
+1) Re-estimate and then use the output to write out the estimated model that incorporates the linear time trend and the month component from HW 1. Use indicator/dummy variable notation and define all model aspects.
+```{r,warning=F,message=F}
+
+rawd1<-read.csv("https://dl.dropboxusercontent.com/u/77307195/rawbozemandata.csv",header=T)
+#View(rawd1)
+head(rawd1)
+
+# My first simple idea - generate floor truncated years and then subtract
+rawd1$Year<-(floor(rawd1$DATE/100))
+rawd1$Month<-round((rawd1$DATE/100-rawd1$Year)*100,1)
+rawd1$Yearfrac<-rawd1$Year+(rawd1$Month-1)/12
+rawd1$Monthf<-factor(rawd1$Month)
+
+model1<-lm(MMXT~Yearfrac+Monthf,data=rawd1)
+source("https://dl.dropboxusercontent.com/u/77307195/concise_lm.R") #Function to clean up lm model summaries
+print(summary(model1), concise = T)
+
+#Or using pander:
+require(pander)
+
+pander(summary(model1))
+```
+
+  - The estimated model is $\widehat{Temp_t}=-69.3+0.052*Year+3.7*I_{Feb,t}+11.19*I_{Mar,t}+21.98*I_{Apr,t}+31.22*I_{May,t}+39.71*I_{Jun,t}+49.56*I_{Jul,t}+48.47*I_{Aug,t}+37.62*I_{Sept,t}+25.82*I_{Oct,t}+10.32*I_{Nov,t}+1.73*I_{Dec,t}$ where $I_{Month,t}$ is an indicator that is 1 if observation $t$ is in that month and 0 otherwise.
+  
+  - Note that you want to indicate in some fashion that the model is estimating the mean temperature based on these parts of the model and we usually do that with a hat over the response variable. You can use Sleuth-style notation if you want but I find it problematic for more complex models with interactions in distinguishing different models you want to compare.
+
+  - Some would also argue that the other part of the estimated model is the estimate of the variation of the errors around the line you are fitting. In this case, the residual standard error, the $\hat{\sigma_e}$, is 4.597.
+
+2) What is the model for an observation in a January? July? Simplify the full model for each specific month to just provide a function of `Year`. 
+
+  - The difference in the months is just an adjustment in the intercept in this model since the terms are additive and not interacting. 
+
+  - The model for January is just $\widehat{Temp_t}=-69.3+0.052*Year$ since it is the baseline categorical that R used for my `monthf` variable. 
+  
+  - The model for July adjusts the intercept to be -69.3+49.56=-19.74, so $\widehat{Temp_t}=-19.74+0.052*Year$
+
+
+
+3) Has the mean temperature changed differently in different months? Load the `car` package and make a plot using something like `scatterplot(MMXT~Year|Month,data=rawd1,legend.plot=T,smoother=F)`. Discuss the results in the plot.
+
+
+```{r,warning=F,message=F,fig.height=12,fig.width=11}
+require(car)
+scatterplot(MMXT~Year|Month,data=rawd1,legend.plot=T,smoother=F)
+```
+
+  - The color palette may not be ideal in this plot, but it is an easy way to see the 12 different linear regression lines. Tinkering with sizing can make it easier to see things.
+  
+  - There are clear differences in the intercepts for the different groups and is some variation in the slope of the lines for different months. For example, the slopes in the colder months seem to differ a bit (although it is hard to tell which ones are which month with the re-use of colors). The middle temperature months look really parallel except for June that had a slightly lower slope than the others. All look to have positive slopes and the variation around the lines might suggest that there really isn't too much of a difference in the slopes across the months, which the next question directly assesses.
+
+
+4) Explore the same research question as in #3 by fitting a model with a `Year` by `Month` interaction (include main `effects` too). Generate and report an F-test for the interaction in the model using either `anova` or `Anova` from the `car` package. Write out a one-sentence conclusion that summarizes the results of the test including information on the distribution of the test statistic under the null hypothesis in that sentence.
+
+```{r,warning=F,message=F,fig.height=12,fig.width=11}
+model2<-lm(MMXT~Yearfrac*Monthf,data=rawd1)
+require(car)
+Anova(model2)
+```
+
+  - There is moderate evidence (F(11,1350)=2.13, p-value=0.016) of at least one difference in the true slopes across the months for the mean monthly maximum temperatures in Bozeman between 1900 and 2015. 
+  
+  - I tend to consider 0.016 at the moderate evidence level, nearing strong. I got answers between weak and very strong based on this result. We are trying to allow you more freedom to intrepret strength of evidence yourself but maybe we can discuss this in class. Is a 16 in a 1000 chance of finding something as extreme or more extreme than what we observed really "weak" evidence? It seems like that is pretty good evidence against the null hypothesis.
+
+  - Some people interpreted this and the other hypothesis test as "strong evidence of improved fit". That is not correct. Any model addition in a linear model provides improved fit (all increase R-squared) regardless of how important. If you really want to use the word "fit", which I don't like, you should say that you found evidence that the term explained real or true variation in the responses. I like to focus more on presence/absence or model modifications that the test supports. My answer above discusses what the change is in the slopes by having the interaction in the model. And it does it is in terms of the true slope. It is awkward in time series to talk about populations since we have the entire population but the "true" slope here would be the real change in the mean over time allowing for some variation in the responses around it. 
+  
+  - With the interaction added to a model, most would assume that the main effects involved in the interaction are included but it is fine to note that they are present. In a journal article, you could leave those pieces out. When the interaction is interesting, the main effects are not the main story since the interaction explicity states that the effects of one variable change based on the level of the other variable.
+
+
+5) Return to the additive model (`Year+Month`) and let's consider the potential evidence for specific differences in the pairs of months. We can test the 12 choose 2 comparisons, maintaining overall or "family-wise" error rates of, say, 5% by using Tukey's Honest Significant Difference. This is a little more complicated to use than in a simpler One-Way ANOVA model because we need to adjust for the linear trend. But the method is easily extended to handle more complicated models and those with multiple predictors using the same code you can use in the One-Way ANOVA case (See Greenwood and Banner (2016) Section 2.5 and 2.6 (https://scholarworks.montana.edu/xmlui/handle/1/2999) for more on this method in the simpler scenario). Your code will be something like the following, after you install the `multcomp` package. Note that you may need to modify the model name (`model1` below) and the variable to perform Tukey's HSD on (`Monthf` below).
+
+`require(multcomp)`
+
+`Tukey_results<-glht(model1,linfct=mcp(Monthf="Tukey"))`
+
+`summary(Tukey_results)`
+
+`confint(Tukey_results)`
+
+  You can also plot the results but with so many comparisons, the plot is not very useful. Based on these results, what can you say about evidence for differences in the months after controlling for the linear year trend? A fairly simple pattern should arise in the results. I find it useful to switch to saying differences were or were not "detected" when dealing with a large suite of Tukey's results. 
+
+```{r,warning=F,message=F,fig.height=12,fig.width=11}
+require(multcomp)
+Tukey_results<-glht(model1,linfct=mcp(Monthf="Tukey"))
+summary(Tukey_results)
+confint_results<-confint(Tukey_results)
+pander(confint_results$confint)
+```
+
+  - While there are many comparisons here (66 from `choose(12,2)`), almost all show evidence of differences in the months after controlling for the linear trend. There are only four months that are not detected as being different if you use the familywise 5% significance level. Specifically, July and August, November and March, December and February, and December and January are all not detected as being different. Note that January and February are detected as being different from each other even though they are not detected as different from December.
+
+  - With this sort of multiple comparison situation, you have to pick a significance level and use it as a defined cutoff. All multiple testing adjustments are derived using some sort of assumed significance level even if the adjustments are backed out to provide adjusted p-values. 
+  
+
+6) One other issue that wasn't obvious in either the initial plots or in the model diagnostics is whether the linear trend really is a good description of the changes over time. There are a couple of ways to add polynomial terms to linear models. The simplest is just to create a squared version of the variable and include it as an additional variable. We'll see that this isn't an optimal choice in the next homework, but let's start this way for now. Once you are considering incorporating polynomials, we need to consider some sort of model refinement to decide on the polynomial order (linear, quadratic, cubic, quartic, etc.) to use. One technique is to sequentially add higher order versions of the variable to the lower order (linear, quadratic, etc.) versions of it and stop when the highest order term has a "large p-value" and drop back to the next lower order model that has the highest order term having a small p-value (checking diagnostics to make sure nothing really high order was missed). Employ this approach, starting with adding a quadratic `Year` variable to the `Year+Month` model. Report the test for the quadratic component (with distribution, test statistic, and p-value) and interpret this result, remembering that t-tests are conditional on other stuff in the model. 
+
+
+```{r,warning=F,message=F,fig.height=7,fig.width=10}
+model3<-lm(MMXT~Yearfrac+I(Yearfrac^2)+Monthf,data=rawd1)
+pander(summary(model3))
+
+```
+
+  - There is no evidence of a quadratic year component (t(1360)=-0.576, p-value=0.565) in a model with a linear year component and the additive month adjustment. 
+  
+  - Note that the `pander` version of the table doesn't provide the residual DF that you need to discuss the distribution of the t-statistic under the null but it is in the typical model summary.
+
+  - I do want you avoid using the word "significant". It is an unclear term at best and misunderstood at worst. I want you to use terms like "evidence that the true...". If you really want to use the term after this class is done, make sure you clarify whether you are talking about statistical or practical significance. 
+  
+
+7) For the model with the linear and quadratic `Year` components and an additive `Month`, produce the 2x2 diagnostic plots from `plot(model)` as in HW 1. This time, discuss the top left panel (`Residuals vs Fitted`). Discuss what you can generally assess in this plot and then discuss the specific results for this model. 
+```{r,warning=F,message=F,fig.height=7,fig.width=10}
+par(mfrow=c(2,2))
+plot(model3)
+```
+
+  - It shows the residuals vs the fitted values from the model. This plot is useful for assessing linearity of the responses versus the explanatory variables (really versus the predicted values since we have categorical and polynomials here), non-constant variance assessment, and potential outliers. We can't see time trends here because the fitted values are not monotonic with time like they were in simpler situations.
+  
+  - There might be minor evidence of decreasing variability as the fitted values increase. There is more variability near the coldest months that is left over from the model than there is in the warmer months. There is no obvious missed nonlinearity in the residuals. The changing variability could just be a few outliers as well but non seem too isolated so are not likely too big of an issue. All the extra variability is in the lower tail of the distribution and so causes some normality issues but that is really only obvious once you check the QQ-plot.
+  
+  - In this display, you can clearly see how much the month variable relates to the fitted values. Some thought this violated an assumption of some sort but the pattern of fitted values comes from having both useful quantitative and categorical predictors. The months are very different so you see distinct fitted values for different months. If this was a violation of something, all ANOVA models would create this issue. The differences in the months fitted values is related to the trend component.
+  
+  - It seemed that the "linearity" assumption was confusing to many of you. Linearity is about the form of the relationship between the mean response and the predictors, mainly focused on whether some additional curvature is missed in the relationship with quantitative variables. For categorical predictors, there is no way to add curvature so they aren't part of this directly except that in the residuals vs fitted they make up a good chunk of the fitted values here. What will happen is that if you fit a model like this with quadratic trend and months and see some curvature in the residuals vs fitted, you are missing some additional curvature for the function of the version of the trend that you are using. We'll see more examples of this (HW 3).
+
+
+8) Run the following code so I can see what version of R you are using:
+
+### Documenting R version 
+
+```{r}
+getRversion()
+```
+
+
+
+

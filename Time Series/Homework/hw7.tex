@@ -1,0 +1,550 @@
+\documentclass[11pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0, 0, 0}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.4,0.4,0.4}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{\textbf{#1}}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0,0,0}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0,0,0}{\textbf{#1}}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0,0,0}{\textbf{#1}}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0,0,0}{\textbf{#1}}}%
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage{fullpage,graphicx,float,amsmath,enumitem,hyperref}
+\setlist{parsep=5.5pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\baselineskip}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Time Series HW 7}
+\rhead{Kenny Flagg and Andrea Mack}
+\setlength{\headheight}{18pt}
+\setlength{\headsep}{2pt}
+
+\title{Time Series HW 7}
+\author{Kenny Flagg and Andrea Mack}
+\date{October 27, 2016}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\maketitle
+
+
+
+{\it Revisit your CO2 concentration time series from HW 4. If you want to switch groups from that assignment you can or you can work in the same ones. If you switch groups, pick a time series to analyze from those you worked with. Groups of up to 3. And just one time series per group.}
+
+As in HW4, we will use the High Altitude Global Climate Observation Center, Mexico (MEX) dataset because we thought the High Altitude aspect may show interesting features of $CO_{2}$ concentrations not available in other datasets. The site is located at the coordinates 18.984, -97.311 near the summit of a 15,000 ft mountain.
+
+The information page on these data indicates measured responses are on the $X2007$ $CO_2$ mole fraction scale. The excerpt from the information page gives insightful information about $CO_2$ and the data:
+
+\begin{quote}
+Carbon dioxide (CO2) in ambient and standard air samples is
+detected using a non-dispersive infrared (NDIR) analyzer.
+The measurement of CO2 in air is made relative to standards 
+whose CO2 mole fraction is determined with high precision and 
+accuracy. Because detector response is non-linear in the range
+of atmospheric levels, ambient samples are bracketed during 
+analysis by a set of reference standards used to calibrate 
+detector response. Measurements are reported in units of 
+micromol/mol ($10^{-6}$ mol CO2 per mol of dry air or parts per 
+million (ppm)). Measurements are directly traceable to the 
+WMO CO2 mole fraction scale.
+
+Uncertainty in the measurements of CO2 from discrete samples 
+has not yet been fully evaluated.  Key components of it are our
+ability to propagate the WMO $XCO2$ scale to working standards, 
+the repeatability of the analyzers used for sample measurement, 
+and agreement between pairs of samples collected simultaneously.
+Zhao and Tans (2006) determined that the internal consistency
+of working standards is +/- 0.02 ppm (68\% confidence interval).
+The typical repeatability of the analyzers, based on repeated 
+measurements of natural air from a cylinder, is +/- 0.03 ppm.
+Average pair agreement across the entire sampling network is
++/- 0.1 ppm.
+
+The Pacific Ocean Cruise (POC, travelling between the US west coast
+and New Zealand or Australia) data have been merged and grouped into 
+5 degree latitude bins.  For the South China Sea cruises (SCS) the 
+data are grouped in 3 degree latitude bins.
+
+Sampling intervals are approximately weekly for the fixed sites
+and average one sample every 3 weeks per latitude zone for POC and
+about one sample every week per latitude for SCS.
+
+Historically, samples have been collected using two general methods:
+flushing and then pressurizing glass flasks with a pump, or opening a
+stopcock on an evacuated glass flask; since 28 April 2003, only the
+former method is used.  During each sampling event, a pair of flasks 
+is filled.
+\end{quote}
+
+
+
+\begin{enumerate}
+
+\item%1
+{\it We are going to be exploring a more complete model that includes a long-term trend and a seasonal component. We need to pick the type of trend and the form of the seasonal component. For the long term trend, consider the following options: no trend, linear trend, or quadratic trend. For the seasonal component, consider no seasonal component, seasonal means, single harmonic pair (m=1), and 5th order harmonic (m=5). Consider all combinations of these components, fit using ``lm".  Create a table that contains the model description, model used DF (so the count of free parameters), AICs, and $\Delta$AICs, sorting the table by AIcs. Use this information to discuss the top model selected (what was in it), the strength of support for that model versus the others, and the strength of evidence for a long-term trend and seasonal component (of the type selected) versus not including them in the model. 
+
+  - You should be creating a table that contains twelve models.}
+  
+  
+% latex table generated in R 3.3.1 by xtable 1.8-2 package
+% Fri Oct 28 13:49:10 2016
+\begin{table}[H]
+\centering
+\begin{tabular}{llrr}
+  \hline
+Model & Free DF & AIC & deltaAIC \\ 
+  \hline
+Linear Year, 5th Order Harmonic & 12 & 202.38 & 0.00 \\ 
+  Linear Year, Seasonal Means & 13 & 203.08 & 0.70 \\ 
+  Quadratic Year, 5th Order Harmonic & 13 & 204.37 & 1.99 \\ 
+  Quadratic Year, 5th Order Harmonic & 14 & 205.07 & 2.69 \\ 
+  Linear Year, 1st Order Harmonic & 4 & 287.20 & 84.82 \\ 
+  Quadratic Year, 1st Order Harmonic & 5 & 289.20 & 86.82 \\ 
+  Linear Year, No Seasonality & 2 & 387.39 & 185.01 \\ 
+  Quadratic Year, No Seasonality & 3 & 389.39 & 187.01 \\ 
+  No Year, 1st Order Harmonic & 3 & 500.30 & 297.92 \\ 
+  No Year, No Seasonality & 1 & 510.90 & 308.52 \\ 
+  No Year, 5th Order Harmonic & 11 & 511.64 & 309.26 \\ 
+  No Year, 5th Order Harmonic & 12 & 513.61 & 311.23 \\ 
+   \hline
+\end{tabular}
+\end{table}
+% latex table generated in R 3.3.1 by xtable 1.8-2 package
+% Fri Oct 28 13:49:10 2016
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrrr}
+  \hline
+ & Sum Sq & Df & F value & Pr($>$F) \\ 
+  \hline
+year & 1592.88 & 1 & 2856.39 & 0.0000 \\ 
+  harmonic(monthts, m = 5) & 420.82 & 10 & 75.46 & 0.0000 \\ 
+  Residuals & 40.15 & 72 &  &  \\ 
+   \hline
+\end{tabular}
+\end{table}
+
+The top model had the lowest AIC, the Linear Year, 5th Order Harmonic with 12 free degrees of freedom. Using Type II SS, there is strong evidence of a linearly linear trend after accounting for month based on an F stat of 2856.4 on 1 and 72 df and a pvalue <0.001. There is strong evidence at least one of the harmonic month coefficeints is not zero after accounting for year based on an F stat of 75.5 on 10 and 72 df and a pvalue of <0.001.
+
+No Year, No Seasonality $y_{t}$ = $eta_{o} + e_{t}$
+
+Linear Year, No Seasonality $y_{t}$ = $\gamma_{o} + \gamma_{1}year + e_{t}$
+
+Quadratic Year, No Seasonality $y_{t}$ = $\gamma_{o} + 
+                   \gamma_{1}year + \gamma_{1}year^{2} + e_{t}$
+
+No Year, Seasonal Means $y_{t}$ = $\beta_{1}jan.ind + \beta_{2}feb.ind + 
+\beta_{3}mar.ind + \beta_{4}apr.ind + 
+               \beta_{5}may.ind + \beta_{6}june.ind + \beta_{7}july.ind + 
+\beta_{8}aug.ind + \beta_{9}sept.ind +
+               \beta_{10}oct.ind + \beta_{11}nov.ind + 
+\beta_{12}dec.ind + e_{t}$
+
+Linear Year, Seasonal Means $y_{t}$ = $\gamma_{1}year + \beta_{1}jan.ind  + 
+\beta_{2}feb.ind + \beta_{3}mar.ind + \beta_{4}apr.ind + 
+               \beta_{5}may.ind + \beta_{6}june.ind + \beta_{7}july.ind + 
+\beta_{8}aug.ind + \beta_{9}sept.ind +
+               \beta_{10}oct.ind + \beta_{11}nov.ind + 
+\beta_{12}dec.ind + e_{t}$
+
+Quadratic Year, Seasonal Means $y_{t}$ = $\gamma_{1}year + \gamma_{2}year^{2} + 
+\beta_{1}jan.ind + \beta_{2}feb.ind + \beta_{3}mar.ind + \beta_{4}apr.ind + 
+\beta_{5}may.ind + \beta_{6}june.ind + \beta_{7}july.ind + \beta_{8}aug.ind + \beta_{9}sept.ind +
+               \beta_{10}oct.ind + \beta_{11}nov.ind + \beta_{12}dec.ind + e_{t}$
+
+No Year, 1st Order Harmonic $y_{t} = \beta_{0} + \beta_{1}cos(2\pi f(t)) + 
+                    \beta_{2}sin(2\pi f(t)) + e_{t}$
+
+Linear Year, 1st Order Harmonic $y_{t} = \gamma_{0} + \gamma_{1}year + 
+                    \beta_{1}cos(2\pi f(t)) + \beta_{2}sin(2\pi f(t)) + e_{t}$
+
+Quadratic year, 1st Order Harmonic $y_{t} = \gamma_{0} + \gamma_{1}year + 
+                    \gamma_{2}year^{2} + \beta_{1}cos(2\pi f(t)) + 
+                    \beta_{2}sin(2\pi f(t)) + e_{t}$
+
+No Year, 5th Order Harmonic $y_{t} = \beta_{0} + \Sigma_{i=1:5} \beta_{i}cos(2i\pi f(t)) + 
+                    \psi_{i}sin(2i\pi f(t)) + e_{t}$
+
+Linear Year, 5th Order Harmonic $y_{t} = \gamma_{0} + \gamma_{1}year + \Sigma_{i=1:5} 
+                    \beta_{i}cos(2i\pif(t)) + \psi_{i}sin(2i\pi f(t)) + e_{t}$
+
+Quadratic Year, 5th Order Harmonic $y_{t} = \gamma_{0} + \gamma_{1}year + \gamma_{1}year^{2} + 
+                    \Sigma_{i=1:5} \beta_{i}cos(2i\pif(t)) + \psi_{i}sin(2i\pi f(t)) + e_{t}$
+
+\item%2
+{\it Now fit a ``gam" from the ``mgcv" package that includes a long-term trend based on a thin-plate spline with shrinkage that uses `k=#years,bs="ts"` from the fractional year variable and a cyclic spline seasonal component. To build the cyclic spline component, use the numerically coded month variable that goes from 1 to 12 and {\texttt k=12,bs=``cc"}. Fit the model, plot the long-term trend and the seasonal component (use ``plot(gam$\_$model)"), and discuss the estimated components, using both the plots and the EDF of each term.} 
+
+To model the complexity in the long term component, we need about one parameter for each year. There appears to be a linear long term year component with some slight curvature and the month component appears to be cyclic. Months appear to come in pairs as there are half the degrees of freedom as the number of months.
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{1, 1, 1}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/prob2-1} 
+
+}
+
+
+\begin{kframe}\begin{verbatim}
+
+Family: gaussian 
+Link function: identity 
+
+Formula:
+value ~ s(time(yearts), k = 7, bs = "ts") + s(monthts, k = 12, 
+    bs = "cc")
+
+Estimated degrees of freedom:
+5.80 6.64  total = 13.45 
+
+GCV score: 0.5546075     
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\item%3
+{\it Calculate the AIC of the GAM using the ``AIC" function and discuss how that result compares to your AICs in #1. How is it similar or different in terms of information (degrees of freedom) used?}
+
+GAM has a lower AIC than all of the models fit in (1). GAM has a fractional degrees of freedom while the models in (1) did not. The degrees of freedom used on GAM are on the upper end of the degrees of freedom used in models in (1).
+
+
+\item%4
+{\it Compare the fitted values of your GAM to those from your top model, plotting the two models's results and the responses vs time on the same plot.}
+
+All plots of fitted values are very similar. The main difference is in the peaks and the troughs, being slightly higher or slightly lower than what was observed. 
+
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{1, 1, 1}\color{fgcolor}
+
+{\centering \includegraphics[width=\maxwidth]{figure/prob4-1} 
+
+}
+
+
+
+\end{knitrout}
+
+\begin{center}
+{\large \bf{A simulation study with autocorrelation present}}
+\end{center}
+
+\item%5
+{\it Revisit your simulation with an AR(1) from HW 6 # 8. Consider fitting a model with autocorrelation in it using ``gls" from the ``nlme" package that accounts for an MA(1) error and another that accounts for an AR(1) error. Run your simulation code, extracting the p-values from the two model summaries and estimate the type I error rate in each situation and compare it to what you get from the regular linear model. 
+
+
+
+- In a ``gls" model summary, the estimates, SEs, test statistics, and p-values are contained in the `tTable` part of the summary. It has a similar layout to `coef` that we pulled the [2,4] element from to get the p-value from ``lm".}
+
+We generated responses from an AR1 process and fit two models, one that accounted for an AR1 correlation and one that accounted for a moving average correlation. We simulated 1000 of each type of model and found the average number of models that resulted in pvalues for the yearly component less than 0.05. On average we ``rejected" at the 5\% significance level 5.6 \% of the time for the models with AR1 correlation structures and ``rejected" 19.2\% of the time for the models with correlation structures that accounted for a moving average. 
+
+As you can see, in the long run, we rejected very nearly at the specified Type I error rate when fitting a model with the AR1 correlation structure, as expected, because that is how the responses were generated. However, by only accounting for a MA1 correlation structure, we rejected too often for a specified 5\% error rate.
+
+\begin{center}
+{\large \bf{Some derivation practice (these can be handwritten). 
+
+If you have not completed STAT 421 or equivalent, please try the problem and then take advantage of advanced help by stopping by to chat about your answer.}}
+\end{center}
+
+
+\item%6
+{\it Answer Cryer and Chan question 2.4 (page 20)}
+
+
+\item%7
+{\it Suppose that we are interested in the properties of a local average (linear filter) of two observations from an original time series, $x_t$. The new series is $y_t=(0.5)*(x_{t-1}+x_t)$. The mean of $x_t$ is 3, the variance of $x_t$ is 4, and the correlation between any neighboring $x_t$'s is 0.5 (so $cor(x_t, x_{t-1})=0.5$). $x_t$'s more than two time points apart are uncorrelated (correlation is 0). Use the rules for means and variances of linear combinations to find $E(y_t)$, $Var(y_t)$, and $Cov(y_t,y_{t-1})$. Do not worry about what happens at the edges of the time series (for t=1 or t=n), only worry about $t$ in general. 
+
+  - Note that you have some preliminary work to complete to go from the provided information to what you need to work on the three derivations requested.}
+
+\end{enumerate}
+
+\section*{References}
+
+
+\appendix
+\section*{R Code}
+
+\begin{enumerate}
+
+%\setcounter{enumi}{3}
+\item%1
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{1, 1, 1}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{## no seasonal component}
+
+\hlstd{lm_nt.ns} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlnum{1}\hlstd{,} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_nt.ns} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\}$ = $\textbackslash{}beta_\{o\} + e_\{t\}$"}\hlstd{)}
+\hlstd{df_nt.ns} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_nt.ns)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_nt.ns} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_nt.ns)}
+\hlstd{nt.ns} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"No Year, No Seasonality"}\hlstd{, df_nt.ns, aic_nt.ns)}
+
+\hlstd{lm_lt.ns} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlstd{year,} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_lt.ns} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\}$ = $\textbackslash{}\textbackslash{}gamma_\{o\} + \textbackslash{}\textbackslash{}gamma_\{1\}year + e_\{t\}$"}\hlstd{)}
+\hlstd{df_lt.ns} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_lt.ns)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_lt.ns} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_lt.ns)}
+\hlstd{lt.ns} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Linear Year, No Seasonality"}\hlstd{, df_lt.ns, aic_lt.ns)}
+
+\hlstd{lm_qt.ns} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlkwd{poly}\hlstd{(year,} \hlkwc{degree} \hlstd{=} \hlnum{2}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_qt.ns} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\}$ = $\textbackslash{}\textbackslash{}gamma_\{o\} + 
+                   \textbackslash{}\textbackslash{}gamma_\{1\}year + \textbackslash{}\textbackslash{}gamma_\{1\}year^\{2\} + e_\{t\}$"}\hlstd{)}
+\hlstd{df_qt.ns} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_qt.ns)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_qt.ns} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_qt.ns)}
+\hlstd{qt.ns} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Quadratic Year, No Seasonality"}\hlstd{, df_qt.ns, aic_qt.ns)}
+
+\hlcom{## seasonal means}
+
+\hlstd{lm_nt.sm} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlkwd{as.factor}\hlstd{(month),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_nt.sm} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\}$ = $\textbackslash{}\textbackslash{}beta_\{1\}jan.ind + \textbackslash{}\textbackslash{}beta_\{2\}feb.ind + 
+\textbackslash{}\textbackslash{}beta_\{3\}mar.ind + \textbackslash{}\textbackslash{}beta_\{4\}apr.ind + 
+               \textbackslash{}\textbackslash{}beta_\{5\}may.ind + \textbackslash{}\textbackslash{}beta_\{6\}june.ind + \textbackslash{}\textbackslash{}beta_\{7\}july.ind + 
+\textbackslash{}\textbackslash{}beta_\{8\}aug.ind + \textbackslash{}\textbackslash{}beta_\{9\}sept.ind +
+               \textbackslash{}\textbackslash{}beta_\{10\}oct.ind + \textbackslash{}\textbackslash{}beta_\{11\}nov.ind + 
+\textbackslash{}\textbackslash{}beta_\{12\}dec.ind + e_\{t\}$"}\hlstd{)}
+\hlstd{df_nt.sm} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_nt.sm)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_nt.sm} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_nt.sm)}
+\hlstd{nt.sm} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"No Year, 5th Order Harmonic"}\hlstd{, df_nt.sm, aic_nt.sm)}
+
+\hlstd{lm_lt.sm} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlstd{year} \hlopt{+} \hlkwd{as.factor}\hlstd{(month),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_lt.sm} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\}$ = $\textbackslash{}\textbackslash{}gamma_\{1\}year + \textbackslash{}\textbackslash{}beta_\{1\}jan.ind  + 
+\textbackslash{}\textbackslash{}beta_\{2\}feb.ind + \textbackslash{}\textbackslash{}beta_\{3\}mar.ind + \textbackslash{}\textbackslash{}beta_\{4\}apr.ind + 
+               \textbackslash{}\textbackslash{}beta_\{5\}may.ind + \textbackslash{}\textbackslash{}beta_\{6\}june.ind + \textbackslash{}\textbackslash{}beta_\{7\}july.ind + 
+\textbackslash{}\textbackslash{}beta_\{8\}aug.ind + \textbackslash{}\textbackslash{}beta_\{9\}sept.ind +
+               \textbackslash{}\textbackslash{}beta_\{10\}oct.ind + \textbackslash{}\textbackslash{}beta_\{11\}nov.ind + 
+\textbackslash{}\textbackslash{}beta_\{12\}dec.ind + e_\{t\}$"}\hlstd{)}
+\hlstd{df_lt.sm} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_lt.sm)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_lt.sm} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_lt.sm)}
+\hlstd{lt.sm} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Linear Year, Seasonal Means"}\hlstd{, df_lt.sm, aic_lt.sm)}
+
+\hlstd{lm_qt.sm} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlkwd{poly}\hlstd{(year,} \hlkwc{degree} \hlstd{=} \hlnum{2}\hlstd{)} \hlopt{+} \hlkwd{as.factor}\hlstd{(month),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_qt.sm} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\}$ = $\textbackslash{}\textbackslash{}gamma_\{1\}year + \textbackslash{}\textbackslash{}gamma_\{2\}year^\{2\} + 
+\textbackslash{}\textbackslash{}beta_\{1\}jan.ind + \textbackslash{}\textbackslash{}beta_\{2\}feb.ind + \textbackslash{}\textbackslash{}beta_\{3\}mar.ind + \textbackslash{}\textbackslash{}beta_\{4\}apr.ind + 
+\textbackslash{}\textbackslash{}beta_\{5\}may.ind + \textbackslash{}\textbackslash{}beta_\{6\}june.ind + \textbackslash{}\textbackslash{}beta_\{7\}july.ind + \textbackslash{}\textbackslash{}beta_\{8\}aug.ind + \textbackslash{}\textbackslash{}beta_\{9\}sept.ind +
+               \textbackslash{}\textbackslash{}beta_\{10\}oct.ind + \textbackslash{}\textbackslash{}beta_\{11\}nov.ind + \textbackslash{}\textbackslash{}beta_\{12\}dec.ind + e_\{t\}$"}\hlstd{)}
+\hlstd{df_qt.sm} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_qt.sm)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_qt.sm} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_qt.sm)}
+\hlstd{qt.sm} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Quadratic Year, 5th Order Harmonic"}\hlstd{, df_qt.sm, aic_qt.sm)}
+
+
+\hlcom{#harmonic() generates sines and cosines }
+\hlcom{#note: time unit affects frequency measure}
+\hlcom{#discuss: what does m do?  Ho: the number of cycles}
+\hlcom{#discuss: is there a phi component? the help file doesn't have one }
+\hlcom{#and I don't understand what is meant by "phase" = phi}
+\hlcom{#discuss: what is t here?}
+\hlstd{mex}\hlopt{$}\hlstd{monthts} \hlkwb{<-} \hlkwd{ts}\hlstd{(mex}\hlopt{$}\hlstd{month,} \hlkwc{frequency} \hlstd{=} \hlnum{12}\hlstd{)}
+
+\hlstd{lm_nt.sh1} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlkwd{harmonic}\hlstd{(monthts,} \hlkwc{m} \hlstd{=} \hlnum{1}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_nt.sh1} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\} = \textbackslash{}\textbackslash{}beta_\{0\} + \textbackslash{}\textbackslash{}beta_\{1\}cos(2\textbackslash{}\textbackslash{}pi f(t)) + 
+                    \textbackslash{}\textbackslash{}beta_\{2\}sin(2\textbackslash{}\textbackslash{}pi f(t)) + e_\{t\}$"}\hlstd{)}
+\hlstd{df_nt.sh1} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_nt.sh1)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_nt.sh1} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_nt.sh1)}
+\hlstd{nt.sh1} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"No Year, 1st Order Harmonic"}\hlstd{, df_nt.sh1, aic_nt.sh1)}
+
+\hlstd{lm_lt.sh1} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlstd{year} \hlopt{+} \hlkwd{harmonic}\hlstd{(monthts,} \hlkwc{m} \hlstd{=} \hlnum{1}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_lt.sh1} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\} = \textbackslash{}\textbackslash{}gamma_\{0\} + \textbackslash{}\textbackslash{}gamma_\{1\}year + 
+                    \textbackslash{}\textbackslash{}beta_\{1\}cos(2\textbackslash{}\textbackslash{}pi f(t)) + \textbackslash{}\textbackslash{}beta_\{2\}sin(2\textbackslash{}\textbackslash{}pi f(t)) + e_\{t\}$"}\hlstd{)}
+\hlstd{df_lt.sh1} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_lt.sh1)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_lt.sh1} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_lt.sh1)}
+\hlstd{lt.sh1} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Linear Year, 1st Order Harmonic"}\hlstd{, df_lt.sh1, aic_lt.sh1)}
+
+\hlstd{lm_qt.sh1} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlkwd{poly}\hlstd{(year,} \hlnum{2}\hlstd{)} \hlopt{+} \hlkwd{harmonic}\hlstd{(monthts,} \hlkwc{m} \hlstd{=} \hlnum{1}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_qt.sh1} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\} = \textbackslash{}\textbackslash{}gamma_\{0\} + \textbackslash{}\textbackslash{}gamma_\{1\}year + 
+                    \textbackslash{}\textbackslash{}gamma_\{2\}year^\{2\} + \textbackslash{}\textbackslash{}beta_\{1\}cos(2\textbackslash{}\textbackslash{}pi f(t)) + 
+                    \textbackslash{}\textbackslash{}beta_\{2\}sin(2\textbackslash{}\textbackslash{}pi f(t)) + e_\{t\}$"}\hlstd{)}
+\hlstd{df_qt.sh1} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_qt.sh1)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_qt.sh1} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_qt.sh1)}
+\hlstd{qt.sh1} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Quadratic Year, 1st Order Harmonic"}\hlstd{, df_qt.sh1, aic_qt.sh1)}
+
+\hlcom{## m = 5}
+
+\hlstd{lm_nt.sh5} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlkwd{harmonic}\hlstd{(monthts,} \hlkwc{m} \hlstd{=} \hlnum{5}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_nt.sh5} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\} = \textbackslash{}\textbackslash{}beta_\{0\} + \textbackslash{}\textbackslash{}Sigma_\{i=1:5\} \textbackslash{}\textbackslash{}beta_\{i\}cos(2i\textbackslash{}\textbackslash{}pi f(t)) + 
+                    \textbackslash{}\textbackslash{}psi_\{i\}sin(2i\textbackslash{}\textbackslash{}pi f(t)) + e_\{t\}$"}\hlstd{)}
+\hlstd{df_nt.sh5} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_nt.sh5)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_nt.sh5} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_nt.sh5)}
+\hlstd{nt.sh5} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"No Year, 5th Order Harmonic"}\hlstd{, df_nt.sh5, aic_nt.sh5)}
+
+\hlstd{lm_lt.sh5} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlstd{year} \hlopt{+} \hlkwd{harmonic}\hlstd{(monthts,} \hlkwc{m} \hlstd{=} \hlnum{5}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_lt.sh5} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\} = \textbackslash{}\textbackslash{}gamma_\{0\} + \textbackslash{}\textbackslash{}gamma_\{1\}year + \textbackslash{}\textbackslash{}Sigma_\{i=1:5\} 
+                    \textbackslash{}\textbackslash{}beta_\{i\}cos(2i\textbackslash{}\textbackslash{}pif(t)) + \textbackslash{}\textbackslash{}psi_\{i\}sin(2i\textbackslash{}\textbackslash{}pi f(t)) + e_\{t\}$"}\hlstd{)}
+\hlstd{df_lt.sh5} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_lt.sh5)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_lt.sh5} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_lt.sh5)}
+\hlstd{lt.sh5} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Linear Year, 5th Order Harmonic"}\hlstd{, df_lt.sh5, aic_lt.sh5)}
+
+\hlstd{lm_qt.sh5} \hlkwb{<-} \hlkwd{lm}\hlstd{(value} \hlopt{~} \hlkwd{poly}\hlstd{(year,} \hlnum{2}\hlstd{)} \hlopt{+} \hlkwd{harmonic}\hlstd{(monthts,} \hlkwc{m} \hlstd{=} \hlnum{5}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+\hlstd{mod_qt.sh5} \hlkwb{<-} \hlkwd{paste}\hlstd{(}\hlstr{"$y_\{t\} = \textbackslash{}\textbackslash{}gamma_\{0\} + \textbackslash{}\textbackslash{}gamma_\{1\}year + \textbackslash{}\textbackslash{}gamma_\{1\}year^\{2\} + 
+                    \textbackslash{}\textbackslash{}Sigma_\{i=1:5\} \textbackslash{}\textbackslash{}beta_\{i\}cos(2i\textbackslash{}\textbackslash{}pif(t)) + \textbackslash{}\textbackslash{}psi_\{i\}sin(2i\textbackslash{}\textbackslash{}pi f(t)) + e_\{t\}$"}\hlstd{)}
+\hlstd{df_qt.sh5} \hlkwb{<-} \hlkwd{summary}\hlstd{(lm_qt.sh5)}\hlopt{$}\hlstd{df[}\hlnum{1}\hlstd{]}
+\hlstd{aic_qt.sh5} \hlkwb{<-} \hlkwd{AIC}\hlstd{(lm_qt.sh5)}
+\hlstd{qt.sh5} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Quadratic Year, 5th Order Harmonic"}\hlstd{, df_qt.sh5, aic_qt.sh5)}
+
+\hlstd{df_all} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwd{rbind}\hlstd{(nt.ns, lt.ns, qt.ns, nt.sm, lt.sm, qt.sm, nt.sh1,}
+                           \hlstd{lt.sh1, qt.sh1, nt.sh5, lt.sh5, qt.sh5))}
+\hlkwd{colnames}\hlstd{(df_all)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Model"}\hlstd{,} \hlstr{"Free DF"}\hlstd{,} \hlstr{"AIC"}\hlstd{)}
+
+\hlstd{df_all} \hlkwb{<-} \hlkwd{arrange}\hlstd{(df_all, AIC)}
+
+\hlstd{df_all}\hlopt{$}\hlstd{AIC} \hlkwb{<-} \hlkwd{round}\hlstd{(}\hlkwd{as.numeric}\hlstd{(}\hlkwd{as.character}\hlstd{(df_all}\hlopt{$}\hlstd{AIC)),} \hlnum{2}\hlstd{)}
+\hlstd{df_all}\hlopt{$}\hlstd{deltaAIC} \hlkwb{<-} \hlkwd{round}\hlstd{(}\hlkwd{as.numeric}\hlstd{(}\hlkwd{as.character}\hlstd{(df_all}\hlopt{$}\hlstd{AIC)),} \hlnum{2}\hlstd{)} \hlopt{-}
+  \hlkwd{round}\hlstd{(}\hlkwd{as.numeric}\hlstd{(}\hlkwd{as.character}\hlstd{(df_all}\hlopt{$}\hlstd{AIC[}\hlnum{1}\hlstd{])),} \hlnum{2}\hlstd{)}
+\hlkwd{colnames}\hlstd{(df_all)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Model"}\hlstd{,} \hlstr{"Free DF"}\hlstd{,} \hlstr{"AIC"}\hlstd{,} \hlstr{"deltaAIC"}\hlstd{)}
+
+\hlkwd{print}\hlstd{(}\hlkwd{xtable}\hlstd{(df_all),} \hlkwc{include.rownames} \hlstd{=} \hlnum{FALSE}\hlstd{)}
+
+
+\hlstd{all_mod} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwd{rbind}\hlstd{(mod_qt.sh5, mod_lt.sh5, mod_nt.sh5,}
+                            \hlstd{mod_qt.sh1, mod_lt.sh1, mod_nt.sh1, mod_qt.sm, mod_lt.sm, mod_nt.sm, mod_qt.ns, mod_lt.ns, mod_nt.ns))}
+
+\hlkwd{row.names}\hlstd{(all_mod)} \hlkwb{<-} \hlkwd{c}\hlstd{(}\hlstr{"Quadratic Year, 5th Order Harmonic"}\hlstd{,}
+                        \hlstr{"Linear Year, 5th Order Harmonic"}\hlstd{,} \hlstr{"No Year, 5th Order Harmonic"}\hlstd{,}
+                        \hlstr{"Quadratic Year, 1st Order Harmonic"}\hlstd{,} \hlstr{"Linear Year, 1st Order Harmonic"}\hlstd{,}
+                        \hlstr{"No Year, 1st Order Harmonic"}\hlstd{,} \hlstr{"Quadratic Year, Seasonal Means"}\hlstd{,}
+                        \hlstr{"Linear Year, Seasonal Means"}\hlstd{,} \hlstr{"No Year, Seasonal Means"}\hlstd{,}
+                        \hlstr{"Quadratic Year, No Seasonality"}\hlstd{,} \hlstr{"Linear Year, No Seasonality"}\hlstd{,}
+                        \hlstr{"No Year, No Seasonality"}\hlstd{)}
+
+\hlkwd{colnames}\hlstd{(all_mod)} \hlkwb{<-} \hlstr{" "}
+
+\hlkwd{xtable}\hlstd{(}\hlkwd{Anova}\hlstd{(lm_lt.sh5,} \hlkwc{type} \hlstd{=} \hlstr{"II"}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\item%2
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{1, 1, 1}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{mex}\hlopt{$}\hlstd{yearts} \hlkwb{<-} \hlkwd{ts}\hlstd{(mex}\hlopt{$}\hlstd{year,} \hlkwc{frequency} \hlstd{=} \hlnum{12}\hlstd{)}
+\hlstd{gam1} \hlkwb{<-} \hlkwd{gam}\hlstd{(value} \hlopt{~} \hlkwd{s}\hlstd{(}\hlkwd{time}\hlstd{(yearts),} \hlkwc{k} \hlstd{=} \hlnum{7}\hlstd{,} \hlkwc{bs} \hlstd{=} \hlstr{"ts"}\hlstd{)} \hlopt{+}
+              \hlkwd{s}\hlstd{(monthts,} \hlkwc{k} \hlstd{=} \hlnum{12}\hlstd{,} \hlkwc{bs} \hlstd{=} \hlstr{"cc"}\hlstd{),} \hlkwc{data} \hlstd{= mex)}
+
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow} \hlstd{=} \hlkwd{c}\hlstd{(}\hlnum{1}\hlstd{,}\hlnum{2}\hlstd{))}
+\hlkwd{plot}\hlstd{(gam1)}
+
+\hlstd{gam1}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\item%3
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{1, 1, 1}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{aic_gam1} \hlkwb{<-} \hlkwd{AIC}\hlstd{(gam1)}
+
+\hlstd{gam1.edf} \hlkwb{<-} \hlkwd{sum}\hlstd{((gam1)}\hlopt{$}\hlstd{edf)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\item%4
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{1, 1, 1}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{ggplot}\hlstd{(}\hlkwc{data} \hlstd{= mex,} \hlkwd{aes}\hlstd{(}\hlkwc{x} \hlstd{=} \hlkwd{time}\hlstd{(year),} \hlkwc{y} \hlstd{= value))} \hlopt{+} \hlkwd{geom_line}\hlstd{()} \hlopt{+} \hlkwd{scale_x_continuous}\hlstd{(}\hlkwc{breaks} \hlstd{=} \hlkwd{c}\hlstd{(}\hlkwd{seq}\hlstd{(}\hlnum{0}\hlstd{,}\hlnum{80}\hlstd{,}\hlkwc{by}\hlstd{=}\hlnum{13.33}\hlstd{)),} \hlkwc{labels} \hlstd{=} \hlkwd{c}\hlstd{(}\hlkwd{seq}\hlstd{(}\hlkwd{min}\hlstd{(mex}\hlopt{$}\hlstd{year),} \hlkwd{max}\hlstd{(mex}\hlopt{$}\hlstd{year),} \hlkwc{by} \hlstd{=} \hlnum{1}\hlstd{)))} \hlopt{+} \hlkwd{ylab}\hlstd{(}\hlkwd{expression}\hlstd{(}\hlstr{"CO_2"}\hlstd{))} \hlopt{+} \hlkwd{xlab}\hlstd{(}\hlstr{"Year"}\hlstd{)} \hlopt{+} \hlkwd{theme_bw}\hlstd{()} \hlopt{+} \hlkwd{geom_line}\hlstd{(}\hlkwc{data} \hlstd{= mex,} \hlkwd{aes}\hlstd{(}\hlkwc{x} \hlstd{=} \hlkwd{time}\hlstd{(mex}\hlopt{$}\hlstd{year),} \hlkwc{y} \hlstd{= gam1}\hlopt{$}\hlstd{fitted,} \hlkwc{col} \hlstd{=} \hlstr{"GAM"}\hlstd{))} \hlopt{+} \hlkwd{geom_line}\hlstd{(}\hlkwc{data} \hlstd{= mex,} \hlkwd{aes}\hlstd{(}\hlkwc{x} \hlstd{=} \hlkwd{time}\hlstd{(mex}\hlopt{$}\hlstd{year),} \hlkwc{y} \hlstd{= lm_lt.sh5}\hlopt{$}\hlstd{fitted.values,} \hlkwc{col} \hlstd{=} \hlstr{"Linear Harm5"}\hlstd{))} \hlopt{+} \hlkwd{theme}\hlstd{(}\hlkwc{legend.position} \hlstd{=} \hlstr{"bottom"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\item%5
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{1, 1, 1}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{Bozeman}\hlkwb{<-}\hlkwd{read.csv}\hlstd{(}\hlstr{"Bozeman.csv"}\hlstd{,}\hlkwc{header}\hlstd{=T)}
+
+\hlstd{monthsF}\hlkwb{<-}\hlkwd{sort}\hlstd{(}\hlkwd{unique}\hlstd{(Bozeman}\hlopt{$}\hlstd{MonthRE))}
+\hlstd{countfun}\hlkwb{<-}\hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{)} \hlkwd{c}\hlstd{(}\hlkwd{sum}\hlstd{(x}\hlopt{<}\hlnum{32}\hlstd{),}\hlkwd{sum}\hlstd{(}\hlopt{!}\hlkwd{is.na}\hlstd{(x)))}
+
+\hlstd{monthcountMINF}\hlkwb{<-}\hlkwd{aggregate}\hlstd{(Bozeman}\hlopt{$}\hlstd{TMIN..F.,}\hlkwc{by}\hlstd{=}\hlkwd{list}\hlstd{(Bozeman}\hlopt{$}\hlstd{MonthRE),}\hlkwc{FUN}\hlstd{=countfun)}
+\hlstd{yearcountMINF}\hlkwb{<-}\hlkwd{aggregate}\hlstd{(Bozeman}\hlopt{$}\hlstd{TMIN..F.,}\hlkwc{by}\hlstd{=}\hlkwd{list}\hlstd{(Bozeman}\hlopt{$}\hlstd{Year),}\hlkwc{FUN}\hlstd{=countfun)}
+
+\hlstd{Data1}\hlkwb{<-}\hlkwd{data.frame}\hlstd{(}\hlkwc{Year}\hlstd{=yearcountMINF[,}\hlnum{1}\hlstd{],}\hlkwc{DaysBelow32}\hlstd{=yearcountMINF}\hlopt{$}\hlstd{x[,}\hlnum{1}\hlstd{],}
+                  \hlkwc{MeasuredDays}\hlstd{=yearcountMINF}\hlopt{$}\hlstd{x[,}\hlnum{2}\hlstd{],}
+                  \hlkwc{PropDays}\hlstd{=yearcountMINF}\hlopt{$}\hlstd{x[,}\hlnum{1}\hlstd{]}\hlopt{/}\hlstd{yearcountMINF}\hlopt{$}\hlstd{x[,}\hlnum{2}\hlstd{])}
+\hlcom{#corAR1 == AR1 process}
+\hlcom{#corARMA == autoregressive moving avg}
+\hlstd{gls_ar1_obs} \hlkwb{<-} \hlkwd{gls}\hlstd{(PropDays} \hlopt{~} \hlstd{Year,} \hlkwc{data} \hlstd{= Data1,} \hlkwc{correlation} \hlstd{=} \hlkwd{corARMA}\hlstd{(}\hlkwc{p}\hlstd{=}\hlnum{1}\hlstd{,}\hlkwc{q}\hlstd{=}\hlnum{0}\hlstd{))}
+
+\hlstd{gls_ma1_obs} \hlkwb{<-} \hlkwd{gls}\hlstd{(PropDays} \hlopt{~} \hlstd{Year,} \hlkwc{data} \hlstd{= Data1,} \hlkwc{correlation} \hlstd{=} \hlkwd{corARMA}\hlstd{(}\hlkwc{p} \hlstd{=} \hlnum{0}\hlstd{,} \hlkwc{q} \hlstd{=} \hlnum{1}\hlstd{))}
+
+\hlcom{#generate random errors from the ar1 process where the first lag autocorrelation is 0.6}
+\hlstd{ar1sim} \hlkwb{<-} \hlkwd{data.frame}\hlstd{(}\hlkwd{replicate}\hlstd{(}\hlnum{1000}\hlstd{,} \hlkwd{arima.sim}\hlstd{(}\hlkwc{n} \hlstd{=} \hlnum{109}\hlstd{,}
+                                               \hlkwc{model}\hlstd{=}\hlkwd{list}\hlstd{(}\hlkwc{ar}\hlstd{=}\hlkwd{c}\hlstd{(}\hlnum{0.6}\hlstd{),} \hlkwc{sd}\hlstd{=}\hlkwd{sqrt}\hlstd{(}\hlnum{0.0006664659}\hlstd{)))))}
+
+\hlcom{#write fn to extract year coefficient from models}
+\hlstd{fnt_ar1} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{s}\hlstd{,}\hlkwc{t}\hlstd{)\{}
+  \hlkwd{gls}\hlstd{(t} \hlopt{~} \hlstd{s,} \hlkwc{correlation} \hlstd{=} \hlkwd{corARMA}\hlstd{(}\hlkwc{p}\hlstd{=}\hlnum{1}\hlstd{,}\hlkwc{q}\hlstd{=}\hlnum{0}\hlstd{))}
+\hlstd{\}}
+
+\hlstd{fnt_ma1} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{s}\hlstd{,}\hlkwc{t}\hlstd{)\{}
+  \hlkwd{gls}\hlstd{(t} \hlopt{~} \hlstd{s,} \hlkwc{correlation} \hlstd{=} \hlkwd{corARMA}\hlstd{(}\hlkwc{p}\hlstd{=}\hlnum{0}\hlstd{,}\hlkwc{q}\hlstd{=}\hlnum{1}\hlstd{))}
+\hlstd{\}}
+
+\hlcom{#fn wasn't liking having Data1$Year, or calling on data = Data1 so changed it}
+\hlstd{modar1_year} \hlkwb{<-} \hlkwd{apply}\hlstd{(ar1sim[,}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{a}\hlstd{)\{}\hlkwd{fnt_ar1}\hlstd{(Data1}\hlopt{$}\hlstd{Year,a)\})}
+
+\hlstd{modma1_year} \hlkwb{<-} \hlkwd{apply}\hlstd{(ar1sim[,}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{a}\hlstd{)\{}\hlkwd{fnt_ma1}\hlstd{(Data1}\hlopt{$}\hlstd{Year,a)\})}
+
+\hlstd{ciar1_year} \hlkwb{<-} \hlkwd{lapply}\hlstd{(modar1_year,} \hlkwa{function}\hlstd{(}\hlkwc{a}\hlstd{)\{}\hlkwd{confint}\hlstd{(a)[}\hlnum{2}\hlstd{,]\})}
+\hlstd{cima1_year} \hlkwb{<-} \hlkwd{lapply}\hlstd{(modma1_year,} \hlkwa{function}\hlstd{(}\hlkwc{a}\hlstd{)\{}\hlkwd{confint}\hlstd{(a)[}\hlnum{2}\hlstd{,]\})}
+
+\hlstd{fnt_pvalue} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{s}\hlstd{,}\hlkwc{t}\hlstd{)\{}
+  \hlkwd{summary}\hlstd{(}\hlkwd{gls}\hlstd{(t} \hlopt{~} \hlstd{s,} \hlkwc{correlation} \hlstd{=} \hlkwd{corARMA}\hlstd{(}\hlkwc{p}\hlstd{=}\hlnum{1}\hlstd{,}\hlkwc{q}\hlstd{=}\hlnum{0}\hlstd{)))}\hlopt{$}\hlstd{tTable[}\hlnum{2}\hlstd{,}\hlnum{4}\hlstd{]}
+\hlstd{\}}
+
+\hlstd{fnt_pvalue_ma1} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{s}\hlstd{,}\hlkwc{t}\hlstd{)\{}
+  \hlkwd{summary}\hlstd{(}\hlkwd{gls}\hlstd{(t} \hlopt{~} \hlstd{s,} \hlkwc{correlation} \hlstd{=} \hlkwd{corARMA}\hlstd{(}\hlkwc{p}\hlstd{=}\hlnum{0}\hlstd{,}\hlkwc{q}\hlstd{=}\hlnum{1}\hlstd{)))}\hlopt{$}\hlstd{tTable[}\hlnum{2}\hlstd{,}\hlnum{4}\hlstd{]}
+\hlstd{\}}
+
+\hlstd{modar1_pvalue} \hlkwb{<-} \hlkwd{apply}\hlstd{(ar1sim[,}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{],} \hlnum{2}\hlstd{,} \hlkwa{function}\hlstd{(}\hlkwc{a}\hlstd{)\{}\hlkwd{fnt_pvalue}\hlstd{(Data1}\hlopt{$}\hlstd{Year,a)\})}
+
+\hlstd{modma1_pvalue} \hlkwb{<-} \hlkwd{apply}\hlstd{(ar1sim[,}\hlnum{1}\hlopt{:}\hlnum{1000}\hlstd{],} \hlnum{2}\hlstd{,}\hlkwa{function}\hlstd{(}\hlkwc{a}\hlstd{)\{}\hlkwd{fnt_pvalue_ma1}\hlstd{(Data1}\hlopt{$}\hlstd{Year,a)\})}
+
+\hlstd{ar1_pvalue} \hlkwb{<-} \hlkwd{mean}\hlstd{(modar1_pvalue}\hlopt{<}\hlnum{0.05}\hlstd{)}
+\hlstd{ma1_pvalue} \hlkwb{<-} \hlkwd{mean}\hlstd{(modma1_pvalue}\hlopt{<}\hlnum{0.05}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\end{enumerate}
+
+\end{document}

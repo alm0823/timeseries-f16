@@ -1,0 +1,239 @@
+---
+word_document:
+  fig_height: 8
+  fig_width: 5
+  reference_docx: mystyles.docx
+author: "Mark Greenwood"
+date: ''
+output: word_document
+title: "Time Series HW 3"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## HW 3 Key
+
+Graded out of 54.5 points but scored out of 60 to make the math easier for me.
+
+5% bonus if you find someone completely new to work with - that you did not work with on first two assignments.
+
+I mentioned de-seasonalizing of time series, where the seasonal variation is removed from the series to highlight variation at either higher or lower frequencies. There are a variety of techniques for doing this but the simplest is to just subtract the mean for each month from the observations. And the easiest way to find that is using `lm(y~month,data=...)`. 
+
+1) For the Bozeman temperature data from HW 1 and 2, estimate a model with month only, subtract its fitted values from the responses (or just extract residuals). Plot the residuals vs the fractional `Year` variable and compare the plot of this result to the plot of the original time series. 
+
+```{r,warning=F,message=F}
+
+rawd1<-read.csv("https://dl.dropboxusercontent.com/u/77307195/rawbozemandata.csv",header=T)
+
+rawd1$Year<-(floor(rawd1$DATE/100))
+rawd1$Month<-round((rawd1$DATE/100-rawd1$Year)*100,1)
+rawd1$Yearfrac<-rawd1$Year+(rawd1$Month-1)/12
+rawd1$Monthf<-factor(rawd1$Month)
+
+m_month<-lm(MMXT~Monthf,data=rawd1)
+source("https://dl.dropboxusercontent.com/u/77307195/concise_lm.R") #Function to clean up lm model summaries
+print(summary(m_month), concise = T)
+
+#Or using pander:
+require(pander)
+
+pander(summary(m_month))
+
+plot(MMXT~Yearfrac,data=rawd1,type="l")
+plot(residuals(m_month)~rawd1$Yearfrac,type="l")
+
+```
+
+  - The first plot has the clear seasonality present and a wide range on the y-axis that makes seeing the long term change in the mean hard although there is a hint of increasing mean temperatures in the plot.
+  
+  - Once the series is de-seasonalized, the trend is a little more obvious as are unusual months in the series, especially colder than average ones. It also appears that there could be some decrease in variability in the final decades of the series as compared to the earliest years. It is unclear if this is a data quality change (digital vs analog) or an actual change in the process.
+  
+  - With the seasonal variation removed, we can focus on the trend more clearly since no fixed variation at the seasonal frequency (every twelve months) can be present. We might still see some variation at this frequency in subsets of the series if it changed amplitude or phase slightly over time. 
+
+
+
+2) In the de-seasonalized Bozeman temperature data set, re-assess evidence for the linear trend. Compare the result (test statistic, degrees of freedom and size of p-value) of just fitting a linear time trend in these de-seasonalized responses to the result from our original model with a linear year component and a month adjustment (not the quadratic trend model).
+
+```{r,warning=F,message=F}
+m2<-lm(residuals(m_month)~rawd1$Yearfrac)
+print(summary(m2), concise = T)
+
+m3<-lm(MMXT~Yearfrac+Monthf,data=rawd1)
+print(summary(m3), concise = T)
+```
+
+  - With t(1372)=14 and a p-value<0.0001, there is strong evidence of a linear trend after we remove any seasonality in the time series. This is very similar to the original result of t(1361)=13.94 from question 1 in HW 2. The degrees of freedom in the earlier model were slightly lower to more correctly reflect that we accounted for (and thus needed to estimate) the month to month variation within that model. This version is not accounting for that adjustment even though we did use some of the original information in the data set to estimate those monthly means.
+
+
+3) I briefly discussed the HADCRUT data set in class. We will consider the HADCRUT4 series of temperature anomalies for the Nothern Hemisphere. The fully up to date data set is available at: http://www.metoffice.gov.uk/hadobs/hadcrut4/data/current/time_series/HadCRUT.4.4.0.0.monthly_nh.txt
+
+Download the ensemble median monthly northern hemisphere temperature data. We will use the entire time series that is currently available (January 1850 to July 2016). You might want to read http://www.metoffice.gov.uk/hadobs/hadcrut4/data/current/series_format.html for more information on the columns in the data set.
+
+Because the time series is complete over the time frame under consideration, you can use `ts()` to create a time variable instead of messing around with their `Year/Month` variable. 
+
+Make a plot versus time of the ensemble medians and use that as your response variable in the following questions. Discuss trend, seasonality, outliers, and variability.
+
+
+
+
+```{r,warning=F,message=F}
+data_ensemble<-read.table("http://www.metoffice.gov.uk/hadobs/hadcrut4/data/4.4.0.0/time_series/HadCRUT.4.4.0.0.monthly_nh.txt")
+head(data_ensemble)
+data_hc4<-data_ensemble[,c(1,2)]
+names(data_hc4)<-c("Year","TempAnomaly_C")
+head(data_hc4)
+hc4_ts<-ts(data_hc4$TempAnomaly_C,start=c(1850,1),freq=12)
+require(TSA) #To be able to use season
+hc42<-data.frame(TempAnomaly_C=data_hc4$TempAnomaly_C,Year=time(hc4_ts),Month=season(hc4_ts))
+plot(hc4_ts)
+
+monthplot(hc4_ts)
+
+plot(decompose(hc4_ts)) #See CM 1.5.3 for more details
+
+```
+
+  - There is an increasing mean temperature anomaly in the last 50 or so years. The increases do not appear to be linear over this long time frame.
+  
+  - The variability seems to have decreased after 1900 - maybe due to more weather stations or a change in the process?
+  
+  - There is little or no apparent seasonality that is obvious in the plot of the entire time series. Certainly not the wide swings we would expect from Winter to Summer.
+  
+  - There are a few outliers, with the most extreme in the late 1880s with a very cold temperature anomaly. Similar cold values earlier in the series are not outliers since there are neighboring similar values.
+
+
+
+4) Our main focus with these data will be on estimating the long-term trend, starting with polynomial trend models. But first, check for seasonality in a model that accounts for a linear time trend. Use our previous fractional year for the trend. Report an `effects` plot and a test for the month model component.
+
+Note: when you use `time()` to generate the `Year` variable from a time series object it retains some time series object information that can cause conflicts later on. Create a new variable in your data.frame that uses something like `as.vector(time(tsdataname))`.
+
+```{r,warning=F,message=F}
+m1<-lm(TempAnomaly_C~Year+Month,data=hc42)
+require(car)
+Anova(m1)
+require(effects)
+plot(allEffects(m1))
+print(summary(m1),concise=T)
+```
+
+  - I didn't ask for any specific discussion so did not grade your sentences other than looking for you to extract the test result fully from the output but a sentence for the test would be useful. 
+  
+  - There is strong evidence of a seasonal variation (F(11,1986)=6.74, p-value<0.0001) in the HADCRUT median series _after accounting for a linear trend in the responses_.
+  
+  - The seasonal pattern is a little odd with coldest month being march. July and August being warmest makes some sense. Remember that this is the seasonality left after removing the monthly means from 1951-1990. So there is some missed seasonality in the responses given the way they are generated. It is fairly minor at 0.20 degrees C of maximum difference in months compared to about 0.8 degrees C of change in the linear trend over this timeframe.
+
+5) Check the residuals versus fitted values for any evidence of nonlinearity in the residuals vs fitted that was missed by the model with a linear trend and month component. Also note any potential issues with the constant variance assumption.
+
+```{r,warning=F,message=F}
+par(mfrow=c(2,2))
+plot(m1)
+```
+
+  - The variability looks to be relatively consistent but there is somewhat larger variability at the smallest fitted values. The original plot vs time made this more clear (or a plot of residuals vs time).
+  
+  - There appears to be a fairly clear curve in the residuals vs fitted which suggests that some nonlinearity was missed in the first model.
+
+6) You can add higher order polynomial terms to models using `x1+I(x1^2)+I(x1^3)`... or using the `poly` function, such as `poly(x1,3,raw=T)` for a cubic polynomial that includes the linear and quadratic components (we want this!). The `raw=T` keeps the variables in their raw or input format. Estimate the same model but now using polynomial trends that steps up from linear (poly(time,1,raw=T)) and stop when you get a failure to estimate a part of the model. Briefly discuss what happened.
+
+```{r,warning=F,message=F}
+hc43<-data.frame(TempAnomaly_C=data_hc4$TempAnomaly_C,Year=as.vector(time(hc4_ts)),Month=season(hc4_ts))
+m2<-lm(TempAnomaly_C~poly(Year,2,raw=TRUE)+Month,data=hc43)
+m2
+m3<-lm(TempAnomaly_C~poly(Year,3,raw=TRUE)+Month,data=hc43)
+m3
+m4<-lm(TempAnomaly_C~poly(Year,4,raw=TRUE)+Month,data=hc43)
+m4
+m5<-lm(TempAnomaly_C~poly(Year,5,raw=TRUE)+Month,data=hc43)
+m5 #Fails at 5th order polynomial with failing to estimate one of the polynomial coefficients
+
+```
+
+  - The correct answer here is that the multicollinearity grew so extreme that the model was not estimable as specified. You might also note that 2000^5 is a really large number and we are bordering on having values that are hard to compute and store. That is an issue but not the main issue. To show this, consider rescaling of the Year variable by dividing by 2000:
+  
+```{r,warning=F,message=F}
+m5<-lm(TempAnomaly_C~poly(Year/2000,5,raw=TRUE)+Month,data=hc43)
+m5 
+```
+
+  - It fails at the same polynomial because the failure is about multi-collinearity and that the inverse of $X^TX$ is not computable (the matrix is not full rank). There is nothing magical about the 5th order polynomial here, it just is where it happened in this situation. I've had situations where cubics caused issues and others where you could go a little higher.
+
+7) If we center or, even better, make the polynomial functions orthogonal to one another, we can avoid the issue in the previous question. Use `poly(x1,?,raw=F)` and step up the polynomial order for time until the p-value for the last coefficient (use `summary()`) is "large", reporting the single test result for each step in the building process. Then drop back one order and re-fit the model. Report the `effects` plot of the resulting model and describe the estimated trend. Note: aside from access to orthogonal polynomials the `poly` function interfaces with `Anova` and the `effects` package really nicely.
+
+```{r,warning=F,message=F}
+
+plot(allEffects(m4)) #Plotting last estimable model from the raw variable version
+
+m2o<-lm(TempAnomaly_C~poly(Year,2,raw=FALSE)+Month,data=hc43)
+summary(m2o)$coefficients[1:3,]
+m3o<-lm(TempAnomaly_C~poly(Year,3,raw=FALSE)+Month,data=hc43)
+summary(m3o)$coefficients[c(1,4),]
+m4o<-lm(TempAnomaly_C~poly(Year,4,raw=FALSE)+Month,data=hc43)
+summary(m4o)$coefficients[c(1,5),]
+m5o<-lm(TempAnomaly_C~poly(Year,5,raw=FALSE)+Month,data=hc43)
+summary(m5o)$coefficients[c(1,6),]
+m6o<-lm(TempAnomaly_C~poly(Year,6,raw=FALSE)+Month,data=hc43)
+summary(m6o)$coefficients[c(1,7),]
+m7o<-lm(TempAnomaly_C~poly(Year,7,raw=FALSE)+Month,data=hc43)
+summary(m7o)$coefficients[c(1,8),]
+m8o<-lm(TempAnomaly_C~poly(Year,8,raw=FALSE)+Month,data=hc43)
+summary(m8o)$coefficients[c(1,9),]
+m9o<-lm(TempAnomaly_C~poly(Year,9,raw=FALSE)+Month,data=hc43)
+summary(m9o)$coefficients[c(1,10),]
+m10o<-lm(TempAnomaly_C~poly(Year,10,raw=FALSE)+Month,data=hc43)
+summary(m10o)$coefficients[c(1,11),]
+
+print(summary(m9o),concise=T)
+
+plot(allEffects(m9o))
+
+```
+
+  - Squared component in quadratic: t(1985)=22.5, p-value<0.0001
+  
+  - Cubed component in cubic: t(1984)=6.65, p-value<0.0001
+
+  - fourth order in quartic: t(1983)=10.35, p-value<0.0001
+  
+  - fifth order in quintic: t(1982)=6.1, p-value<0.0001
+
+  - sixth order: t(1981)=-6.451, p-value<0.0001
+  
+  - seventh order: t(1980)=-9.919, p-val<0.0001
+  
+  - eigth order: t(1979)=5.37, p-value<0.0001
+  
+  - ninth order: t(1978)=5.9, p-val<0.0001
+  
+  - 10th order: t(1977)=1.37, p-val=0.172
+  
+  - So we would step back to the 9th order result and summarize and explore it. The estimated trend when you combine all the polynomial pieces suggests a steep decline in mean temperatures from 1860 to 1890, then a relatively linear and relatively steep increase until around 1980 and then a bit of decrease in the rate of increase in the final years of the data set. 
+  
+  - Note that we could extract approximate slopes for the linear sections with a drop from -0.2 to -0.4 in the first 30 years providing a drop of about 0.07 degrees C per decade. This is followed by an increase from -0.4 to 0.3 between 1890 and 1980 or a change of about 0.08 degrees C per decade over this span. The last part of the time range is not displayed in the effect plot but we could do some sort of similar estimate pulling values from the model using predict() if needed.
+  
+
+8) Check the diagnostic plots from your final model. Does anything improve from the first version. Also plot the residuals vs time and compare that plot to residuals vs fitted.  
+
+```{r,warning=F,message=F}
+par(mfrow=c(2,2))
+plot(m9o)
+
+par(mfrow=c(1,1))
+plot(residuals(m9o)~Year,data=hc43)
+```
+
+  - The linearity issue seems to be resolved (we don't have any apparent missed nonlinearity).
+  
+  - The variability may not longer be constant and the normality assumption looks more tenuous as it might be heavy tailed now. These are both related to the higher amounts of variability in the residuals from the lower fitted values.
+  
+  - The residuals plotted over time show a slight decrease in variation over time but it is possibly more clear with residuals vs fitted that there is changing variance. It makes more sense that the variability in temperatures might be related to the mean although having more variability in low temperatures isn't what I exactly expected.
+
+
+9) Run the following code so I can see what version of R you are now using:
+
+### Documenting R version 
+
+```{r}
+getRversion()
+```

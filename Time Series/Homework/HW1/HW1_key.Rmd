@@ -1,0 +1,209 @@
+---
+word_document:
+  fig_height: 7
+  fig_width: 10
+  reference_docx: mystyles.docx
+author: "Mark Greenwood"
+date: ''
+output: word_document
+title: "Time Series HW 1 Key"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## HW 1
+
+- Graded out of 48.5 points but scored out of 60 since some of you are new to working with me and what I look for in these models. There also was a potential 5% bonus. You will see points taken off around the row of the offending part of your response. I usually do not bother to include points possible as I am pretty generous with denominators as happened here but:
+
+Number 1) 5 points
+
+Number 2) 5 ponts
+
+Number 3) 6 points
+
+Number 4) 6 points
+
+Number 5) 9 points
+
+Number 6) 11.5 points
+
+Number 7) 6 points
+
+
+
+1) Read in the data set and use R to make a correct date code that separates year and month. There are many ways to do this. If you can't figure out how to do this using functions in R, you can do this outside R (say in Excel) or by some sort of hand coding of the date information but will get a small deduction in points for bypassing the challenge of doing this in an efficient way in R.
+
+```{r,warning=F,message=F}
+
+rawd1<-read.csv("https://dl.dropboxusercontent.com/u/77307195/rawbozemandata.csv",header=T)
+#View(rawd1)
+head(rawd1)
+
+# My first simple idea - generate floor truncated years and then subtract
+rawd1$Year<-(floor(rawd1$DATE/100))
+rawd1$Month<-round((rawd1$DATE/100-rawd1$Year)*100,1)
+rawd1$Yearfrac<-rawd1$Year+(rawd1$Month-1)/12
+rawd1$Monthf<-factor(rawd1$Month)
+
+head(rawd1)
+
+#Alternate version using substring:
+rawd2<-read.csv("https://dl.dropboxusercontent.com/u/77307195/rawbozemandata.csv",header=T)
+
+rawd3 <- rawd2[,c("DATE","MMXT")] #Just extracting only interesting columns
+rawd3$Year<-as.numeric(substring(rawd3$DATE,1,4)) #Pick out digits 1 to 4 from the fixed width string of 6 digits
+rawd3$Month<-as.factor(substring(rawd3$DATE,5,6)) #Pick out digits 5 and 6 from the fixed width string of 6 digits 
+
+head(rawd3)
+
+#Alternate dplyr and zoo version:
+require(dplyr)
+require(zoo)
+rawd4<-tbl_df(rawd2) %>% mutate(DATE=as.yearmon(as.character(DATE),"%Y%m"))
+
+rawd4<-mutate(rawd4,YEAR=as.numeric(format(DATE,"%Y"))) %>% mutate(MONTH=as.factor(format(DATE,"%m")))
+head(rawd4)
+```
+2) Plot the monthly mean maximum temperatures (y-axis) vs year (x-axis), labelling the axes with the name and units of each variable.
+
+
+```{r,warning=F,message=F}
+plot(MMXT~Yearfrac,data=rawd1,type="p",xlab="Year", ylab="Mean Monthly maximum temperature (Degrees F)")
+require(car)
+scatterplot(MMXT~Yearfrac,data=rawd1,spread=F) #Adds linear regression line and marginal boxplots
+
+#Or versus year with no fractional information:
+plot(MMXT~Year,data=rawd1,xlab="Year", ylab="Mean Monthly maximum temperature (Degrees F)",type="l") #Better to just plot points if not separating points by time within year in some way...
+
+plot(MMXT~Year,data=rawd1,xlab="Year", ylab="Mean Monthly maximum temperature (Degrees F)",type="p") 
+
+```
+
+
+3) Create a variable that is just the year of each observation and another for the month. Then fit a linear model with temperature as the response and year and month as explanatory variables treated correctly as either quantitative or categorical predictors. Do not consider any higher order model terms such as polynomials or interactions. For many reasons but especially for the following question, do any variable manipulations prior to fitting the model and use the general code format for your `lm` of: `model1<-lm(y~x1+x2,data=mydatasetname)`.
+```{r,warning=F,message=F}
+plot(table(rawd1$Year)) #Not all months had observations recorded - usually because of too few days available in given month to trust monthly mean
+
+options(show.signif.stars=FALSE) #Turns off stars
+model1<-lm(MMXT~Year+Monthf,data=rawd1)
+source("https://dl.dropboxusercontent.com/u/77307195/concise_lm.R") #Function to clean up lm model summaries
+print(summary(model1), concise = T)
+#You can also use summary(model1)
+```
+
+4) Install and load the effects package and run the following code to get effects (also better called termplots) of the model that you fit: plot(allEffects(model1)). Discuss the month term-plot in general.
+
+  - The month term-plot suggests that the mean temperature is highest in July and next highest in August with the coldest month of January and December colder than February, on average and after controlling for the linear trend over time. 
+  
+    - You should not use the 95% CIs for comparing levels but it is reassuring to see that the mean monthly mean maximum temperatures are pretty well estimated. If you want to compare months, you should do some sort of pairwise comparison of all 12 choose 2 levels (like using Tukey's HSD) or maybe contrast winter vs summer if you want some higher level comparisons.
+    
+```{r,warning=F,message=F}
+require(effects)
+plot(allEffects(model1))
+```
+4) Install and load the effects package and run the following code to get effects (also better called termplots) of the model that you fit: plot(allEffects(model1)). Discuss the month effect plot in general.
+
+5) For the "year" model component, interpret the estimated slope coefficient and report a 95% confidence interval. Also note the size of the estimated change in the mean temperature over the entire length of the data set and report and confidence interval for that result.
+
+  - The year component has an estimated slope of 0.0517 (95% CI from 0.0444 to 0.0589).
+  
+  - For a 1 year increase in year, we expect the mean of the mean monthly maximum temperatures to increase by 0.0517 degrees F, after controlling for variation in the months (95% CI from 0.0444 to 0.0589).
+
+
+```{r,warning=F,message=F}
+confint(model1)
+```
+
+  - The estimated change in the mean over the 115 years in the data set is 5.94 degrees F (95% CI from 5.1 to 6.8), after controlling for the month to month differences.
+
+```{r,warning=F,message=F}
+#Observations from 1900.0 to 2015 so 115 years from min to max (could use 116 years or 115 if you don't count the first year)
+
+#Raw slope was 0.05167
+
+#Change in mean over range of data set is nearly 6 degrees F
+
+model1$coefficients[2]*115
+
+#95% CI for total change:
+confint(model1)[2,]*115
+
+#Or could refit model with year transformed to go from 0 to 1:
+rawd1$YearScale<-(rawd1$Year-min(rawd1$Year))/(max(rawd1$Year)-min(rawd1$Year))
+
+model1_altscale<-lm(MMXT~YearScale+Monthf,data=rawd1)
+summary(model1_altscale)
+confint(model1_altscale)
+```
+6) Generate a test for the month model component, write out the hypotheses, report the results (extract any pertinent numerical results from output), and write a conclusion based on these results.
+
+  - This should be some sort of F-test to explore evidence that the twelve monthly means are the same after controlling for the linear trend over time. I like Type II tests as they are the same as Type I (conditional all anything higher up in the table) except that the model is refit to have each component assessed conditional on all terms at the same level. Type II SS are only conditional on things higher up in the ANOVA table. 
+  
+  - Here the result is F(11,1361)=1756.55, p-value<0.0001
+  
+  - Hypotheses: 
+  
+      - Null: True mean of the mean monthly max temperatures is the same for all months, controlling for linear trend.
+      
+      - Alternative: At least one true mean of the mean monthly max temperatures is different across the months, controlling for linear trend.
+      
+  - Conclusion:  There is strong evidence (F(11,1361)=1756.55, p-value<0.0001) of some difference in the true mean of the monthly maximum temperatures in Bozeman between 1900 and 2015 after controlling for the linear time trend.
+  
+  - Scope of inference (not graded but should be basic instinct if you completed pre-requisites here at MSU): Since these are not a random sample of sites or years, we can only make inferences to these years in Bozeman. Because there is no random assignment of year or month to responses, we can't make causal inferences, only associations or differences in the responses based on these variables. 
+  
+  - With no causal inferences, try to avoid using "effects" and save that terminology for when random assignment is present (so never in this class).
+  
+
+```{r,warning=F,message=F}
+require(car)
+Anova(model1) #Type II tests that are conditional on all components at the same level in the model, not just ones in the table above it as in Type I tests
+
+```
+
+7) Run the following code:
+
+`par(mfrow=c(2,2))`
+
+`plot(model1)`
+
+It should produce four panels with residuals vs fitted, normall QQ, scale-location, and residuals vs leverage plots. Only discuss the normall QQ plot. What model assumptions does this help us assess and what does it suggest here?
+
+  - QQ-plot only assesses normality of residuals, so we are interested in detecting outliers and shape issues that deviate from normality using this plot. Note that some plots are added below to help re-inforce my conclusion:
+
+  - There is a small deviation in the left tail that suggests slightly more variability than expected from a normal distribution and so this may suggest a slight left skew in the residuals from this model. We might want to explore this further but there is not a huge concern here in this plot.
+
+```{r,warning=F,message=F}
+par(mfrow=c(2,2))
+plot(model1)
+
+par(mfrow=c(1,3))
+#Or using car to obtain studentized residuals
+qqPlot((model1),pch=16)
+require(beanplot)
+beanplot(residuals(model1),method="jitter", col="beige") # A little bit of left skew
+plot(density(residuals(model1)))
+```
+
+
+You might also be curious about the difference in using the truncated year (1900 for all observations in 1900) as opposed to the fractional year. It ends up that it is very little except for minor impacts on the within year predictions each year:
+```{r,warning=F,message=F}
+
+model2<-lm(MMXT~Yearfrac+Monthf,data=rawd1)
+print(summary(model2), concise = T)
+par(mfrow=c(2,2))
+plot(model2)
+
+Anova(model2)
+
+
+```
+
+
+
+
+
+
+
+

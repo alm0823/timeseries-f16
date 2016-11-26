@@ -1,0 +1,46 @@
+\documentclass[11pt]{article}
+\usepackage{fullpage,graphicx,float,amsmath,enumitem,hyperref}
+\setlist{parsep=5.5pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\baselineskip}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{Time Series HW 8}
+\rhead{Allison Theobold, Andrea Mack, and Kenny Flagg}
+\setlength{\headheight}{18pt}
+\setlength{\headsep}{2pt}
+
+\title{Time Series HW 8}
+\author{Allison Theobold, Andrea Mack, and Kenny Flagg}
+\date{November 29, 2016}
+
+\begin{document}
+\maketitle
+
+<<setup, echo = FALSE, message = FALSE, cache = FALSE>>=
+library(knitr)
+opts_chunk$set(echo = FALSE, comment = NA, fig.align = "center",
+               fig.width = 6.5, fig.height = 4, fig.pos = "H",
+               size = "footnotesize", dev = "pdf",
+               dev.args = list(pointsize = 11))
+knit_theme$set("print")
+
+library(xtable)
+options(xtable.table.placement = "H", xtable.caption.placement = "top",
+        width = 80, scipen = 1, show.signif.stars = FALSE)
+@
+
+<<readin,include = FALSE>>=
+oil <- read.csv("Cushing_OK_Crude_Oil_Future_Contract_1.csv")
+colnames(oil) <- c("day", "price")
+oil$day <- rev(oil$day)
+oil$day <- as.character(oil$day)
+head(oil$day)
+tail(oil$day)
+
+
+oil_sub <- oil[which(oil$day == "5/2/1983"):which(oil$day == "10/31/2016"),]
+@
+
+\end{document}
