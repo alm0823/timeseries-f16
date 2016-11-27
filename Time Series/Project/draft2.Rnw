@@ -6,17 +6,19 @@
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
-\lhead{Time Series HW 8}
-\rhead{Allison Theobold, Andrea Mack, and Kenny Flagg}
+\lhead{Time Series Final Project}
+\rhead{Andrea Mack}
 \setlength{\headheight}{18pt}
 \setlength{\headsep}{2pt}
 
-\title{Time Series HW 8}
-\author{Allison Theobold, Andrea Mack, and Kenny Flagg}
+\title{Time Series Final Project}
+\author{Andrea Mack}
 \date{November 29, 2016}
 
 \begin{document}
 \maketitle
+
+Data were obtained. Of interest is properly modeling conditional volatility so as to make accurate predictions of conditional volatility. Conditional volatility is used in VaR to inform markets. Data were subsetted to include January 3, 1984 - December 31, 2015. Predictions will be made on 
 
 <<setup, echo = FALSE, message = FALSE, cache = FALSE>>=
 library(knitr)
@@ -29,6 +31,9 @@ knit_theme$set("print")
 require(xtable)
 require(TSA)
 require(ggplot2)
+require(timeDate)
+require(zoo)#yrmonth
+
 options(xtable.table.placement = "H", xtable.caption.placement = "top",
         width = 80, scipen = 1, show.signif.stars = FALSE)
 @
@@ -45,42 +50,48 @@ head(oil$day)
 tail(oil$day)
 
 
-oil_sub <- oil[which(oil$day == "5/2/1983"):which(oil$day == "10/31/2016"),]
-oil_sub$date <- as.Date(oil_sub$day, format = "%m/%d/%Y")
+oil$date <- (format(as.Date(oil$day), "%d/%m/%Y"))
+oil$r.price <- c(diff(log(oil$price))*100,NA)
 
-require(zoo)
+# pull out 2016, will try to predict
+y2016 <- grepl("2016", oil$day)
+oil_past <- oil[-y2016,]
+oil2016 <- oil[y2016,]
+
+
+oil_sub <- oil[which(oil_past$day == "1/3/1984"):which(oil_past$day == "12/31/2015"),]
+
 oil_sub$yearmn <- as.yearmon(oil_sub$day, "%m/%d/%Y")
 plot(oil_sub$price)
 price_yearmn <- by(oil_sub$price, oil_sub$yearmn, mean)
-
-oil_sub$r.price <- c(diff(log(oil_sub$price))*100,NA)
 r.price_yearmn <- by(oil_sub$r.price, oil_sub$yearmn, mean)
+
+
+
+# A 'timeDate' Sequence
+#d1 <- oil$day[1]
+#dlast <- oil$day[length(oil_sub$day)]
+#tS <- timeSequence(as.Date("1983/4/4"), as.Date("2016/11/22"))
+#tS
+
+# Subset weekdays
+#ggplot(data = oil_sub, aes(x = time(date), y = price)) + geom_line() + ylab("Price in Dollars") + xlab("Date") + theme_bw() + theme(legend.position = "bottom")
 
 ggplot(data = oil_sub, aes(x = time(date), y = price)) + geom_line() + ylab("Price in Dollars") + xlab("Date") + theme_bw() + theme(legend.position = "bottom")
 
+
 ggplot(data = oil_sub, aes(x = time(date), y = log(price))) + geom_line() + ylab("Log Price in Dollars") + xlab("Date") + theme_bw() + theme(legend.position = "bottom")
 
+ggplot(data = oil_sub, aes(x = time(date), y = (r.price))) + geom_line() + ylab("Return in Dollars") + xlab("Date") + theme_bw() + theme(legend.position = "bottom")
 
-acf(ts(data = price_yearmn))
-pacf(ts(data = price_yearmn))
-
-ggplot(data = oil_sub, aes(x = time(date), y = r.price)) + geom_line() + ylab("Return") + xlab("Date") + theme_bw() + theme(legend.position = "bottom")
 @
 
-The ACF and PACF of the daily returns both suggest statistically significant autocorrelation at lags 1, 4, and 5. 
+The ACF and PACF plots inform about the correlation in returns at different time lags. The ACF of the daily returns suggest statistically significant autocorrelation at lags 2, 4, 5, and 8 with reoccuring patterns around day 30. The PACF of the daily returns suggests significant autocorrelation at lags 2, 3, 5, and 8 with again a couple reoccurant significant partial correlations at lags 29 and 33. The reoccuring significant lags after 30 days in both the ACF and PACF plots are not likely spurious as we have daily time series data (excluding holidays and weekends). The PACF adds information about correlations conditional on previous correlations. In the ACF plot lag 4 had a significant correlation whereas in the PACF plot it did not. Given the previous lags' autocorrelation, there is no evidence of additional autocorrelation at lag 4.
 
 <<assess.autocorr>>=
-
-acf(ts(data = oil_sub$r.price[-8403]))
-pacf(ts(data = oil_sub$r.price[-8403]))
-
-acf(ts(data = (r.price_yearmn[-402])))
-pacf(ts(data = (r.price_yearmn[-402])))
-
-
-#+ scale_x_continuous(breaks = c(seq(0,80,by=13.33)), labels = c(seq(min(mex$year), max(mex$year), by = 1)))
-
-
+par(mfrow=c(2,2))
+acf(ts(data = oil_sub$r.price), main = "Returns in 100 Dollars")
+pacf(ts(data = oil_sub$r.price), main = "Returns in 100 Dollars")
 
 
 ######################################################
@@ -107,36 +118,19 @@ pacf(ts(data = (r.price_yearmn[-402])))
 #c(paste(out))
 @
 
-To determine whether observations are independent and identically distributed, versus just having correlated observations, look at the ACF and PACF of the absolute value of the responses (CC 281). There is strong evidence monthly log price returns are not independent and identically distributed. 
+ACF and PACF plots of non-linear transformations of the returns will help assess whether observations are independent and identically distributed, versus just having correlated observations (CC 281). There is strong evidence monthly log price returns are not independent and identically distributed. 
 
 Idea: if lags in ts are independent, then independence will hold through (even) non-linear transformations, whereas if they are uncorrelated, *un*correlation will only hold through linear transformations.
 
 <<abs.plots>>=
-
-acf(ts(data = abs(price_yearmn)))
-pacf(ts(data = abs(price_yearmn)))
-
 acf(ts(data = abs(oil_sub$r.price[-8403])))
 pacf(ts(data = abs(oil_sub$r.price[-8403])))
-
-acf(ts(data = abs(r.price_yearmn[-402])))
-pacf(ts(data = abs(r.price_yearmn[-402])))
-
-
-acf(ts(data = (price_yearmn)^2))
-pacf(ts(data = (price_yearmn)^2))
 
 acf(ts(data = (oil_sub$r.price[-8403])^2))
 pacf(ts(data = (oil_sub$r.price[-8403])^2))
+@
 
-acf(ts(data = abs(oil_sub$r.price[-8403])))
-pacf(ts(data = abs(oil_sub$r.price[-8403])))
-
-acf(ts(data = (r.price_yearmn[-402])^2))
-pacf(ts(data = (r.price_yearmn[-402])^2))
-
-
-
+<<mli>>=
 McLeod.Li.test(y=price_yearmn, gof.lag=length(price_yearmn))
 McLeod.Li.test(y=oil_sub$price, gof.lag=400)
 
@@ -197,8 +191,13 @@ ARCH models are used to forcast conditional variances.
 
 The GARCH(p,q) model is a form of the ARMA(p,q) model such that the current conditional variance is a function of the p previous conditional variances and the q previous returns. Following the $\Nu_{t}$ transformation, the current squared return is written as a function of the max(p,q) previous squared returns and the p previous innovations ($\Nu_{t-p}$) and can be backtransformed to find the currect conditional variance (see CC 294 for the form). The GARCH model also exhibits weak stationarity and innovations from a heavy tailed distribution. However, CC (297) discuss an instance where the GARCH(1,1) model is nonstationary alone.
 
+Parameter estimates are founding using ML.
+
 \section*{Modeling with GARCH}
 <<gmodels>>=
+
+#garch -> order 1 is garch, order 2 is arch
+# i think these should be fit based on plots
 g11 <- garch(r.price_yearmn[-402], order = c(1,1))
 summary(g11)
 AIC(g11)
@@ -217,18 +216,124 @@ summary(g012)
 AIC(g012)
 
 
+g121 <- garch(r.price_yearmn[-402], order = c(12,1))
+summary(g121)
+AIC(g121)
+
+
+g121.d <- garch(oil_sub$r.price[-8403], order = c(12,1))
+summary(g121.d)
+AIC(g121.d)
+
+
 g11.daily <- garch(oil_sub$r.price[-8403], order = c(1,1))
 summary(g11.daily)
 AIC(g11.daily)
 
+oil_sub$date_numeric <- as.numeric(as.POSIXct(oil_sub$date, format = "%m/%d/%Y"))
+
+lm1 <- lm(oil_sub$r.price[-8403]~as.numeric(as.character(oil_sub$date_numeric[-8403])))
+aic(lm1)
+
 
 @
 
+Note that garch uses a Quasi-Newton optimizer to find the ML estimates, for which AIC does not apply (cc 301).
+
+<<compare.var>>=
+r.daily_var <- var(oil_sub$r.price[-8403])
+r.monthly_var <- var(r.price_yearmn[-402])
+
+#eq cc300
+g121.daily_var <- coef(g121.d)[1]/(1-sum(coef(g121.d)[2:14]))
+g121.monthly_var <- coef(g121)[1]/(1-sum(coef(g121.d)[2:14]))
+
+@
+
+
+\section*{Assessing Model Assumptions}
+
+The standardized errors are assumed to be independently and identically distributed.
+
+CC Jarque-Bera test assesses normality, but Mark says not to use.
 <<checking.assump>>=
-hate_t <- oil_sub$r.price/
+qqnorm(residuals(g121, standardized = TRUE))
+qqline(residuals(g121, standardized = TRUE), col = "red")
 
+acf(residuals(g121, standardized = TRUE)^2, na.action=na.omit)
+#since some are still significant, that means violation of independence
+gBox(g11, lags = c(1:20), x = r.price_yearmn[-402], method = "absolute")
+@
+
+Still to do:
+1) use comp code and apply to estimate var and pot
+2) find other previous estimates and compare
+3) discuss other garch model extensions and limitations
+
+\section*{Extreme Value Theory and VaR}
+
+Often of interest is modeling the extremes of the distribution of returns in a financial time series to inform potential risk. Often the exceedance of a threshold is used to model large returns (or losses) because it is shown to be more efficient than modeling the maxima (Charpentier, 258). Assuming the distribution of the returns, $x_{i}$ are independent and identically distributed with an unknown distribution F, Charpentier discusses the limiting ditribution of the $x_{i}$'s as converging in distribution to G under certain constraints with $\eta$ the extreme value index, the peak over threshold (POT) method introduced by (Charpentier, ) based in results from the extreme value theory theorem says that, ``when one selects a threshold high enough, the distribution of the values exceeding the threshold coverges in deistribution to the generalized Pareto distribution:
+
+\begin{equation*}
+$g_{\eta,\beta}(x)$ = \begin{cases}
+
+$\frac{1}{\beta}(1+\eta x/\beta)^{-\frac{1}{\eta} -1}$ if $\eta \neq$ 0
+
+$\frac{1}{\beta}exp({\frac{-x}{\beta}})$ if $\eta$ = 0
+\end{cases}
+\end{equation*}
+
+for $\eta \leq 0$; x $\leq$ 0; $0 \geq x \geq -\beta/\eta$
+
+
+Let Mn = the maximum of the distribution of returns
+
+$G_{\eta}(x) = exp[-(1+(\eta)x)]$
+
+Value at Risk (VaR) is the value that one might lose with a set probablity $\alpha$. Extreme value theory is related to modeling the tail of a distribution. 
+
+<<var>>=
+
+dgp <- function(x, beta = 1, xi=1){
+  if(is.na(beta) || beta <= 0 || is.na(xi))
+    return(rep(NA, length(x)))
+  
+  den <- numeric(length(x))
+  
+  # look for variates that are in the support range
+  
+  idx <-
+    if(xi >= 0)
+      x >= 0
+  else
+    (0 <= x & x <= -beta/xi)
+  
+  den[idx] <- 
+    if(xi != 0)
+      ((1+xi*x[idx]/beta)^(-1/xi-1))/beta
+  else
+    exp(-x[idx]/beta)/beta
+  den}
+}
 
 @
+
+\url{https://www.eia.gov/workingpapers/pdf/factors_influencing_oil_prices.pdf}
+
+suggests that the cgarch model fits oil price data better than the garch model
+
+account for long run price volatilities more
+
+\url{https://www.r-bloggers.com/a-practical-introduction-to-garch-modeling/}
+
+limitation may occur if markets change over time and combining all the markets into one data set
+
+use the t distribution becaue of the fat tails
+
+box-ljung test is not robust to extreme data, but the test is robust -> test whether autocorrelation is accounted for using a test on the ranks
+
+persistence -- sum of first two output terms in garch model
+
 
 
 
