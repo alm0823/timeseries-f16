@@ -20,6 +20,14 @@
 
 Data were obtained. Of interest is properly modeling conditional volatility so as to make accurate predictions of conditional volatility. Conditional volatility is used in VaR to inform markets. Data were subsetted to include January 3, 1984 - December 31, 2015. Predictions will be made on 
 
+The return($r_{t}$) in financial time series is defined by CC as:
+
+$r_{t} = log(price_{t}) - log(price_{t-1})$
+
+The return is thus define as the ratio of the log prices between two subsequent time points. The return is often then scaled by 100 to make numbers more easily thought about. 
+
+Compare ARCH to iid and correlated errors.
+
 <<setup, echo = FALSE, message = FALSE, cache = FALSE>>=
 library(knitr)
 opts_chunk$set(echo = FALSE, comment = NA, fig.align = "center",
@@ -33,6 +41,7 @@ require(TSA)
 require(ggplot2)
 require(timeDate)
 require(zoo)#yrmonth
+require(fGarch)
 
 options(xtable.table.placement = "H", xtable.caption.placement = "top",
         width = 80, scipen = 1, show.signif.stars = FALSE)
@@ -50,7 +59,7 @@ head(oil$day)
 tail(oil$day)
 
 
-oil$date <- (format(as.Date(oil$day), "%d/%m/%Y"))
+oil$date <- (as.Date(oil$day, format = "%m/%d/%Y"))
 oil$r.price <- c(diff(log(oil$price))*100,NA)
 
 # pull out 2016, will try to predict
@@ -117,60 +126,45 @@ pacf(ts(data = oil_sub$r.price), main = "Returns in 100 Dollars")
 
 #c(paste(out))
 @
-
-ACF and PACF plots of non-linear transformations of the returns will help assess whether observations are independent and identically distributed, versus just having correlated observations (CC 281). There is strong evidence monthly log price returns are not independent and identically distributed. 
-
-Idea: if lags in ts are independent, then independence will hold through (even) non-linear transformations, whereas if they are uncorrelated, *un*correlation will only hold through linear transformations.
+Plotting non-linear transformations (versus linear as seen in correlation) of the returns aids in assessing whether observations at different time points are independent and identically distributed (CC 281). The ACF and PACF plots of the squared and absolute returns both have many signficant autocorrelations, suggesting observations at different time points are not independent and identically distributed.
 
 <<abs.plots>>=
-acf(ts(data = abs(oil_sub$r.price[-8403])))
-pacf(ts(data = abs(oil_sub$r.price[-8403])))
+par(mfrow=c(2,2))
+acf(ts(data = abs(oil_sub$r.price)), main = "Absolute Returns in 100 Dollars")
+pacf(ts(data = abs(oil_sub$r.price)), main = "Absolute Returns in 100 Dollars")
 
-acf(ts(data = (oil_sub$r.price[-8403])^2))
-pacf(ts(data = (oil_sub$r.price[-8403])^2))
+acf(ts(data = (oil_sub$r.price)^2), main = "Squared Returns in 100 Dollars")
+pacf(ts(data = (oil_sub$r.price)^2), main = "Squared Returns in 100 Dollars")
 @
 
 <<mli>>=
-McLeod.Li.test(y=price_yearmn, gof.lag=length(price_yearmn))
 McLeod.Li.test(y=oil_sub$price, gof.lag=400)
 
-McLeod.Li.test(y=oil_sub$r.price[-8403], gof.lag=400)
+McLeod.Li.test(y=oil_sub$r.price, gof.lag=400)
 
 @
 
-
-Box-Ljung/McLeod-Li test
+The McLeod-Li Test uses the squared returns so as above, is a test against serial independence. This can also be thought of as assuming no ARCH 
 
 $H_{o}$: no ARCH
 
 $H_{a}$: ARCH
 
-Both the monthly and daily prices as well as the returns suggest strong evidence of ARCH at all lags.
+The test statistic follows a $\chi^{2}_{m}$ distribution with m = the number of lags tested. \url{http://homepage.ntu.edu.tw/~ckuan/pdf/Lec-DiagTest.pdf} {\it could not find }
+
+Both the daily prices and the returns suggest strong evidence of ARCH at all lags.
 
 <<norm>>=
-qqnorm(price_yearmn, main = "NORMAL Q-Q Monthly Prices")
-qqline(price_yearmn, col = "red")
-
+par(mfrow=c(2,2))
 qqnorm(oil_sub$price, main = "NORMAL Q-Q Daily Prices")
 qqline(oil_sub$price, col = "red")
-
-
-qqnorm(log(price_yearmn), main = "NORMAL Q-Q Monthly log(Prices)")
-qqline(log(price_yearmn), col = "red")
-
-qqnorm(log(oil_sub$price), main = "NORMAL Q-Q Daily log(Prices)")
-qqline(log(oil_sub$price), col = "red")
 
 qqnorm(oil_sub$r.price, main = "NORMAL Q-Q Returns")
 qqline(oil_sub$r.price, col = "red")
 
 @
 
-The return($r_{t}$) in financial time series is defined by CC as:
-
-$r_{t} = log(price_{t}) - log(price_{t-1})$
-
-The return is thus define as the ratio of the log prices between two subsequent time points. The return is often then scaled by 100 to make numbers more easily thought about. The ACF and PACF of the returns suggest significant autocorrelations at the 5\% significance level. The ACF and PACF of the absolute value and squared returns both suggest independence is violated. Non-significant autocorrelation and signficiant serial dependence are commmon suggest volatility clustering. Volatility clustering visually is seen when the returns closer together display more similar variability. The Normal Q-Q plot of the returns shows heavy tails. Heavy tailed distributions and volatitlity clustering are common in financial time series data (CC 285). ARCH and GARCH models are used when data display these characteristics. 
+The ACF and PACF of the returns suggest significant autocorrelations at the 5\% significance level. The ACF and PACF of the absolute value and squared returns both suggest independence is violated. Non-significant autocorrelation and signficiant serial dependence are commmon suggest volatility clustering. Volatility clustering visually is seen when the returns closer together display more similar variability. The Normal Q-Q plot of the returns shows heavy tails. Heavy tailed distributions and volatitlity clustering are common in financial time series data (CC 285). ARCH and GARCH models are used when data display these characteristics. 
 
 Let the conditional variance of the returns, Var($r_{t|t-1}$) = $\sigma_{t|t-1}$. In ARCH modeling, a linear regression model of order q is fit to describe the relationship between the current conditional variance and the previous returns. 
 
@@ -194,60 +188,72 @@ The GARCH(p,q) model is a form of the ARMA(p,q) model such that the current cond
 Parameter estimates are founding using ML.
 
 \section*{Modeling with GARCH}
+
+mark, how do I know what model to fit??? not sure from plots...
+case where both acf of raw and squared etc shows sig implies arma and arch?
 <<gmodels>>=
 
 #garch -> order 1 is garch, order 2 is arch
 # i think these should be fit based on plots
-g11 <- garch(r.price_yearmn[-402], order = c(1,1))
-summary(g11)
-AIC(g11)
 
-g22 <- garch(r.price_yearmn[-402], order = c(2,2))
-summary(g22)
-AIC(g22)
-
-g05 <- garch(r.price_yearmn[-402], order = c(0,5))
-summary(g05)
-AIC(g05)
-
-
-g012 <- garch(r.price_yearmn[-402], order = c(0,12))
-summary(g012)
-AIC(g012)
-
-
-g121 <- garch(r.price_yearmn[-402], order = c(12,1))
+g121 <- garchFit(r.price=~arma(0,1)+garch(1,1),data=oil_sub,trace=FALSE,include.mean=FALSE)
 summary(g121)
-AIC(g121)
+g121.aic <- AIC(g121)
 
 
-g121.d <- garch(oil_sub$r.price[-8403], order = c(12,1))
-summary(g121.d)
-AIC(g121.d)
+g11 <- garch(oil_sub$r.price, order = c(1,1))
+summary(g11)
+g11.aic <- AIC(g11)
+
+g8 <- garch(oil_sub$r.price, order = c(1,8))
+summary(g8)
+g8.aic <- AIC(g8)
 
 
-g11.daily <- garch(oil_sub$r.price[-8403], order = c(1,1))
-summary(g11.daily)
-AIC(g11.daily)
 
-oil_sub$date_numeric <- as.numeric(as.POSIXct(oil_sub$date, format = "%m/%d/%Y"))
+g88 <- garch(oil_sub$r.price, order = c(8,8))
+summary(g88)
+g88.aic <- AIC(g88)
 
-lm1 <- lm(oil_sub$r.price[-8403]~as.numeric(as.character(oil_sub$date_numeric[-8403])))
-aic(lm1)
+g48 <- garch(oil_sub$r.price, order = c(4,8))
+summary(g48)
+g48.aic <- AIC(g48)
+
+oil_garch <- garchFit(oil_sub$r.price~garch(1,1))
+summary(oil_garch)
 
 
+oil_sub$date_numeric <- as.numeric(as.POSIXct(as.Date(oil_sub$date), format = "%m/%d/%Y"))
+
+lm1 <- lm(oil_sub$r.price~oil_sub$date)
+lm1.aic <- aic(lm1)[4]
+
+aic_all <- data.frame(c(g8.aic,g121.aic, g11.aic, lm1.aic))
+colnames(aic_all) <- "Model AIC"
+rownames(aic_all) <- c("GARCH(8,1)","GARCH(12,1)", "GARCH(1,1)", "LM")
+
+print(xtable(aic_all))
+#would not fit timely
+#arma1 <- gls(r.price~date, data = oil_sub, correlation = corARMA(p=1,q=1))
+#aic(arma1)
 @
+
+The best fit model in terms of AIC was the GARCH(8,1) model. Normality and independence of squared residuals was tested for this model. CC estimate the long term variance as $\frac{\hat{\omega}}{1-\hat{\alpha} - \hat{\beta}}$. Below is a summary of the long term variances from all GARCH models considered, along with the sample long run variance in returns. All estimates are very close to that observed. {\it why would they be or not be?}
 
 Note that garch uses a Quasi-Newton optimizer to find the ML estimates, for which AIC does not apply (cc 301).
 
 <<compare.var>>=
-r.daily_var <- var(oil_sub$r.price[-8403])
-r.monthly_var <- var(r.price_yearmn[-402])
-
+r.obs_var <- var(oil_sub$r.price)
 #eq cc300
-g121.daily_var <- coef(g121.d)[1]/(1-sum(coef(g121.d)[2:14]))
-g121.monthly_var <- coef(g121)[1]/(1-sum(coef(g121.d)[2:14]))
+g8_var <- coef(g8)[1]/(1-sum(coef(g8)[2:9]))
+g121_var <- coef(g121)[1]/(1-sum(coef(g121)[2:14]))
+g11_var <- coef(g121)[1]/(1-sum(coef(g11)[2:4]))
 
+var_all <- data.frame(c(g8_var, g121_var, g11_var, r.obs_var))
+colnames(var_all) <- "Long Run Variance Esitmates of Returns"
+rownames(var_all) <- c("GARCH(8,1)","GARCH(12,1)", "GARCH(1,1)", "Sample")
+
+print(xtable(var_all))
 @
 
 
@@ -257,12 +263,25 @@ The standardized errors are assumed to be independently and identically distribu
 
 CC Jarque-Bera test assesses normality, but Mark says not to use.
 <<checking.assump>>=
-qqnorm(residuals(g121, standardized = TRUE))
-qqline(residuals(g121, standardized = TRUE), col = "red")
+par(mfrow=c(1,1))
+qqnorm(residuals(g8, standardized = TRUE))
+qqline(residuals(g8, standardized = TRUE), col = "red")
 
-acf(residuals(g121, standardized = TRUE)^2, na.action=na.omit)
-#since some are still significant, that means violation of independence
-gBox(g11, lags = c(1:20), x = r.price_yearmn[-402], method = "absolute")
+acf(residuals(g8, standardized = TRUE)^2, na.action=na.omit)
+pacf(residuals(g8, standardized = TRUE)^2, na.action=na.omit)
+
+@
+
+{\it The assumptions look terrible.}
+
+\section*{Predictions of 2016}
+
+I have no idea what this is predicting
+
+<<predict>>=
+summary(g8)
+predict(g8)
+
 @
 
 Still to do:
@@ -314,6 +333,27 @@ dgp <- function(x, beta = 1, xi=1){
   else
     exp(-x[idx]/beta)/beta
   den}
+
+dgp_oil <- dgp(oil_sub$r.price)
+
+par(mfrow=c(1,1))
+hist(dgp_oil)
+
+evtVaR <- function(loss, alpha = 0.9, u = NULL){
+  if(is.null(u))
+    u <- quantile(loss, 0.95)
+  y <- loss[loss > u] - u
+  Nu <- length(y)
+  n <- length(loss)
+  fit <- nlminb(c(beta = 1, xi = 0),
+                functon(par)
+                -sum(log(dgp(y,par[1],par[2]))),
+                lower = c(0.00000001, -Inf))
+  beta <- fit$par[1]
+  xi <- fit$par[2]
+  VaR <- u + beta/xi * (((n/Nu)*(1-alpha))^(-xi) - 1)
+                        names(VaR) <- NULL
+                        VaR
 }
 
 @
@@ -335,8 +375,63 @@ box-ljung test is not robust to extreme data, but the test is robust -> test whe
 persistence -- sum of first two output terms in garch model
 
 
+CC use the {\texttt garch()} function from the __ package to fit GARCH models. That function is limited in that it does not allow fitting an ARMA and GARCH model at the same time. Since the crude oil returns were not modeled well by the GARCH model, the {\texttt rugarch} package was used as it allows more flexibility in both the GARCH model specified, as well as allowing available complexity with ARMA components.
+
+{\it how do I get aic when I specify this way}
+
+<<garch2>>=
+spec1111 <- ugarchspec(variance.model = list(model = "sGARCH",
+                                                                                  garchOrder = c(1, 1), external.regressors = NULL),
+      mean.model= list(armaOrder = c(1, 1), include.mean = TRUE), distribution.model = "std") #student t
+                                                                                  
+
+oil_garch1111 <- ugarchfit(spec = spec1111, data = oil_sub$r.price, criterion = "AIC")
+plot(oil_garch, which = 8)
+plot(oil_garch, which = 9)
+plot(oil_garch, which = 10)
+plot(oil_garch, which = 11)
 
 
+spec1122 <- ugarchspec(variance.model = list(model = "sGARCH",
+                                                                                  garchOrder = c(2, 2), external.regressors = NULL),
+      mean.model= list(armaOrder = c(1, 1), include.mean = TRUE), distribution.model = "std") #student t
+                                                                                  
+
+oil_garch1122 <- ugarchfit(spec = spec1122, data = oil_sub$r.price)
+plot(oil_garch1122, which = 8)
+plot(oil_garch1122, which = 9)
+plot(oil_garch1122, which = 10)
+plot(oil_garch1122, which = 11)
+
+spec1111 <- ugarchspec(variance.model = list(model = "sGARCH",
+                                                                                  garchOrder = c(1, 1), external.regressors = NULL),
+      mean.model= list(armaOrder = c(1, 1), include.mean = TRUE), distribution.model = "std") #student t
+                                                                                  
+
+oil_garch1111 <- ugarchfit(spec = spec1111, data = oil_sub$r.price)
+plot(oil_garch, which = 8)
+plot(oil_garch, which = 9)
+plot(oil_garch, which = 10)
+plot(oil_garch, which = 11)
+
+
+arma11 <- arima(oil_sub$r.price, order = c(1,1,1))
+par(mfrow=c(2,2))
+acf(residuals(arma11))
+pacf(residuals(arma11))
+
+acf(residuals(arma11)^2)
+pacf(residuals(arma11)^2)
+
+McLeod.Li.test(y=residuals(oil_garch1111), gof.lag=400)
+McLeod.Li.test(y=residuals(oil_garch1111)^2, gof.lag=400)
+
+
+@
+
+
+
+{\it ask mark how to choose which model to use, if specifying right, and what more to do with this... actuarial code...?}
 
 
 
