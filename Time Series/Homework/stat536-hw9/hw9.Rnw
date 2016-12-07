@@ -117,18 +117,32 @@ colnames(df17_int) <- "Limits AR(17) Intercept"
 print(xtable(df17_int))
 summary(bts.ar17)
 
-1-(sum(bts.ar17$coef) - bts.ar17$coef[18])
 @
 
-The intercept in the AR(17) model is estimated to be 113.84 with a standard error of 5.54. The associated 95\% confidence interval is from \Sexpr{df17_int[1,]} to \Sexpr{df17_int[2,]} when an AR(17) model was fit.
+The intercept in the AR(17) model is estimated to be 113.84 with a standard error of 5.54. The associated 95\% confidence interval is from \Sexpr{df17_int[1,]} to \Sexpr{df17_int[2,]} when an AR(17) model was fit. That is, we are 95\% confident the long run mean when there is no autocorrelation present is between \Sexpr{df17_int[1,]} and \Sexpr{df17_int[2,]} days of ice cover a year.
 
 The average number of days ice was on Baikal Lake per year from 1869 to 1996 was estimated {\bf or population data?} to be 113.85 with an associated 95\% confidence interval of \Sexpr{df17_int[1,]} to \Sexpr{df17_int[2,]} days per year. The observed average number of days per year was 113.57, which is very similar to the model estimate.
 
-{\bf Check how to interpret ar coefficients. What does he mean by the actual estimated intercept vs. the estimate of the intercept? Why is this not Poisson?} {\it I thinks he wanted us to figure out Poisson models on our own for the project...}
+The model fit was:
+
+$y_{t} = \phi_{0} + \phi_{1}y_{t-1} + ... + \phi_{17}y_{t-17} + e_{t}$
+
+Where $phi_{0} is the intercept reported by ARIMA(17,0,0). Let $E[y_{t}] = \mu$ for all t and t-i.
+
+Then, $\mu = \phi_{0} + \phi_{1}\mu + ... + \phi_{17} + 0$
+
+The intercept that represents the long run mean is then $\mu$ = \frac{\phi_{0}}{1- \phi_{1} - ... - \phi_{17}}$
+
+The actual estimated mean is then:
+
+\Sexpr{round((1-(sum(bts.ar17$coef[1:17])))*(bts.ar17$coef[18]),3)}
+
+{\it Kenny check}: I believe the difference in interpretation comes in as one is the long run average with autocorrelation present, and the other is not.
+
 
 The binomial model may be more reasonable for the count data in a finite space.
 
-
+Reference: \url{http://www.stat.pitt.edu/stoffer/tsa2/Rissues.htm}
 \item%5
 {\it For the AR(17) model (do not re-fit the model), how many of the lower order autoregressive coefficients are not detectably different from 0 in this model using the confidence intervals?}
 
@@ -192,7 +206,6 @@ $y_{diff_{t}} = \Sexpr{round(dbts.ar0ma1$coef[2],3)} + \Sexpr{round(dbts.ar0ma1$
 
 The estimated 95\% confidence interval for the intercept from the MA(1) model of the data is between  \Sexpr{round(confint(dbts.ar0ma1)[2,1],3)} and \Sexpr{round(confint(dbts.ar0ma1)[2,2],3)}.
 
-{\bf see what mark's response is to interpretting intercept, to answer last part}
 
 
 
